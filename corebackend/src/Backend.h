@@ -52,6 +52,8 @@ class Backend {
     QByteArray setInstanceGroup(const QString& id, const QString& group);
     QByteArray setInstanceIcon(const QString& id, const QString& iconKey);
     QByteArray deleteInstance(const QString& id);
+    QByteArray exportInstance(const QString& id, const QString& outputPath);
+    QByteArray importInstance(const QString& source, const QString& name, const QString& group);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);

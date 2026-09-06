@@ -18,6 +18,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
 
 #include <cstdio>
@@ -172,6 +173,29 @@ int main(int argc, char** argv)
 
         printQuery("instances-after-edit", backend, auracore_list_instances);
 
+        const QString exportPath = QDir(dataPath).absoluteFilePath("export-test.zip");
+        char* exportJson = nullptr;
+        const QByteArray exportPathUtf8 = exportPath.toUtf8();
+        const auracore_status exportStatus =
+            auracore_export_instance(backend, currentId, exportPathUtf8.constData(), &exportJson);
+        std::printf("--- export-instance (status %d) ---\n", int(exportStatus));
+        char exportId[128];
+        std::snprintf(exportId, sizeof(exportId), "%s", currentId);
+        if (exportJson != nullptr) {
+            std::puts(exportJson);
+            char taskId[32];
+            if (findJsonValue(exportJson, "taskId", taskId, sizeof(taskId))) {
+                char* waitJson = nullptr;
+                const auracore_status waitStatus = auracore_wait_task(backend, taskId, 120000, &waitJson);
+                std::printf("--- wait-export (status %d) ---\n", int(waitStatus));
+                if (waitJson != nullptr) {
+                    std::puts(waitJson);
+                    auracore_free(waitJson);
+                }
+            }
+            auracore_free(exportJson);
+        }
+        std::printf("export file exists: %s\n", QFile::exists(exportPath) ? "true" : "false");
         char* deleteJson = nullptr;
         const auracore_status deleteStatus = auracore_delete_instance(backend, currentId, &deleteJson);
         std::printf("--- delete-instance (status %d) ---\n", int(deleteStatus));
@@ -180,6 +204,38 @@ int main(int argc, char** argv)
             auracore_free(deleteJson);
         }
         printQuery("instances-after-delete", backend, auracore_list_instances);
+    }
+    {
+        const QString importSource = QDir(dataPath).absoluteFilePath("export-test.zip");
+        char* importJson = nullptr;
+        const QByteArray importSourceUtf8 = importSource.toUtf8();
+        const auracore_status importStatus =
+            auracore_import_instance(backend, importSourceUtf8.constData(), "Aura Probe Reborn", nullptr, &importJson);
+        std::printf("--- import-instance (status %d) ---\n", int(importStatus));
+        if (importJson != nullptr) {
+            std::puts(importJson);
+            char taskId[32];
+            if (findJsonValue(importJson, "taskId", taskId, sizeof(taskId))) {
+                char* waitJson = nullptr;
+                const auracore_status waitStatus = auracore_wait_task(backend, taskId, 180000, &waitJson);
+                std::printf("--- wait-import (status %d) ---\n", int(waitStatus));
+                if (waitJson != nullptr) {
+                    std::puts(waitJson);
+                    auracore_free(waitJson);
+                }
+            }
+            auracore_free(importJson);
+        }
+        printQuery("instances-after-import", backend, auracore_list_instances);
+
+        char* cleanupJson = nullptr;
+        const auracore_status cleanupStatus = auracore_delete_instance(backend, "Aura Probe Reborn", &cleanupJson);
+        std::printf("--- cleanup-delete (status %d) ---\n", int(cleanupStatus));
+        if (cleanupJson != nullptr) {
+            std::puts(cleanupJson);
+            auracore_free(cleanupJson);
+        }
+        printQuery("instances-final", backend, auracore_list_instances);
     }
     auracore_backend_destroy(backend);
     return 0;

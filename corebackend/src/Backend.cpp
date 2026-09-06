@@ -26,6 +26,7 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QTimer>
+#include <QUrl>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -45,6 +46,9 @@
 #include "meta/Version.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
 #include "InstanceDirUpdate.h"
+#include "InstanceImportTask.h"
+#include "MMCZip.h"
+#include "archive/ExportToZipTask.h"
 #include "meta/VersionList.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
@@ -528,6 +532,87 @@ QByteArray Backend::deleteInstance(const QString& id)
         { "id", id },
     }));
 }
+QByteArray Backend::exportInstance(const QString& id, const QString& outputPath)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+    if (outputPath.isEmpty()) {
+        m_lastError = QStringLiteral("Export output path must not be empty");
+        return {};
+    }
+
+    QFileInfoList files;
+    if (!MMCZip::collectFileListRecursively(instance->instanceRoot(), nullptr, &files, nullptr)) {
+        m_lastError = QStringLiteral("Could not collect instance files for export");
+        return {};
+    }
+
+    // MultiMC-format zip: the archive root mirrors the instance directory, so
+    // InstanceImportTask detects instance.cfg and imports it unchanged.
+    const auto task = makeShared<MMCZip::ExportToZipTask>(outputPath, instance->instanceRoot(), files);
+    const auto tracked = trackTask(task, QStringLiteral("export-instance"));
+    QMetaObject::invokeMethod(task.get(), &Task::start, Qt::QueuedConnection);
+
+    const QString taskId = QString::number(m_nextTaskId - 1);
+    return toJson(QJsonDocument(QJsonObject{
+        { "exporting", true },
+        { "taskId", taskId },
+        { "id", id },
+        { "output", outputPath },
+        { "files", double(files.size()) },
+    }));
+}
+
+QByteArray Backend::importInstance(const QString& source, const QString& name, const QString& group)
+{
+    const QUrl url = QFile::exists(source) ? QUrl::fromLocalFile(QFileInfo(source).absoluteFilePath())
+                                           : QUrl::fromUserInput(source);
+    if (!url.isValid()) {
+        m_lastError = QStringLiteral("Invalid import source: %1").arg(source);
+        return {};
+    }
+    if (name.isEmpty()) {
+        m_lastError = QStringLiteral("Import name must not be empty");
+        return {};
+    }
+
+    // Local files and explicit http(s) sources are trusted; the launcher UI
+    // layer can wrap untrusted downloads with its own vetting.
+    auto* import = new InstanceImportTask(url, true, nullptr);
+    import->setName(name);
+    import->setIcon(QStringLiteral("default"));
+    if (!group.isEmpty()) {
+        import->setGroup(group);
+    }
+
+    Task* staging = m_core->instances()->wrapInstanceTask(import);
+    if (staging == nullptr) {
+        delete import;
+        m_lastError = QStringLiteral("Could not stage the imported instance");
+        return {};
+    }
+
+    const auto tracked = trackTask(Task::Ptr(staging), QStringLiteral("import-instance"));
+    QMetaObject::invokeMethod(staging, &Task::start, Qt::QueuedConnection);
+
+    const QString taskId = QString::number(m_nextTaskId - 1);
+    return toJson(QJsonDocument(QJsonObject{
+        { "importing", true },
+        { "taskId", taskId },
+        { "name", name },
+        { "source", url.toString() },
+    }));
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -780,6 +865,22 @@ auracore_status auracore_delete_instance(auracore_backend* backend, const char* 
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->deleteInstance(QString::fromUtf8(id)), out_json);
+}
+auracore_status auracore_export_instance(auracore_backend* backend, const char* id, const char* output_path, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || output_path == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->exportInstance(QString::fromUtf8(id), QString::fromUtf8(output_path)), out_json);
+}
+
+auracore_status auracore_import_instance(auracore_backend* backend, const char* source, const char* name, const char* group, char** out_json)
+{
+    if (backend == nullptr || source == nullptr || name == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const QString groupName = group == nullptr ? QString() : QString::fromUtf8(group);
+    return writeJson(backend->backend->importInstance(QString::fromUtf8(source), QString::fromUtf8(name), groupName), out_json);
 }
 void auracore_free(char* text)
 {

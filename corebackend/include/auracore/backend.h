@@ -127,6 +127,14 @@ AURACORE_BACKEND_API auracore_status auracore_set_instance_icon(auracore_backend
 /* Deletes the instance directory, its shortcuts, and its group membership.
  * Returns { deleted, id } or { deleted: false, error }. */
 AURACORE_BACKEND_API auracore_status auracore_delete_instance(auracore_backend* backend, const char* id, char** out_json);
+/* Starts a MultiMC-format zip export of the instance directory. Poll the
+ * returned taskId with auracore_task_status / auracore_wait_task. */
+AURACORE_BACKEND_API auracore_status auracore_export_instance(auracore_backend* backend, const char* id, const char* output_path, char** out_json);
+
+/* Starts an import from a local archive path or http(s) URL. MultiMC,
+ * Modrinth, CurseForge and Technic archives are auto-detected. group may be
+ * NULL. Returns { importing, taskId, name, source }. */
+AURACORE_BACKEND_API auracore_status auracore_import_instance(auracore_backend* backend, const char* source, const char* name, const char* group, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 
