@@ -93,8 +93,8 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - [x] 账户体系（list / add_offline / remove / set_default_account；begin_msa_login + msa_login_info 设备码流，微软真实端点签发 userCode，成功后自动入列）
 - [ ] 下载与镜像源策略
 
-### 阶段 4 —— 启动流程与收尾
-- [ ] 启动参数组装与进程管理
+### 阶段 4 —— 启动流程与收尾（当前）
+- [x] 启动参数组装与进程管理（launch_instance 全链头less：组件更新→认证→NewLaunch→游戏进程；stop_instance 终止运行中的游戏；离线账号直启修复 + 进度上报双重启动崩溃修复 + 三 jar 归一 build/jars；真实 e2e：javaw 游戏进程确认存活、任务 succeeded、无孤儿进程，commit b0c455020）
 - [ ] 日志 / 崩溃收集回传双 UI
 - [ ] HMCL 核心退役与数据迁移
 
