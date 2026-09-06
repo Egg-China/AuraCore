@@ -22,6 +22,7 @@
 #include <QHash>
 #include <QString>
 
+#include <functional>
 #include <memory>
 #include "tasks/Task.h"
 
@@ -58,6 +59,8 @@ class Backend {
     QByteArray addOfflineAccount(const QString& username);
     QByteArray removeAccount(const QString& profileName);
     QByteArray setDefaultAccount(const QString& profileName);
+    QByteArray beginMsaLogin();
+    QByteArray msaLoginInfo(const QString& taskId);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);
@@ -77,6 +80,11 @@ class Backend {
         QString status;
         qint64 progress = 0;
         qint64 progressTotal = 0;
+        // Device-code login extras; filled once the provider answers.
+        QString msaVerificationUrl;
+        QString msaUserCode;
+        int msaExpiresIn = 0;
+        std::function<void()> onSuccess;
     };
     using TrackedTaskPtr = std::shared_ptr<TrackedTask>;
 

@@ -268,6 +268,39 @@ int main(int argc, char** argv)
 
         printQuery("accounts-after-remove", backend, auracore_list_accounts);
     }
+    {
+        char* beginJson = nullptr;
+        const auracore_status beginStatus = auracore_begin_msa_login(backend, &beginJson);
+        std::printf("--- begin-msa-login (status %d) ---\n", int(beginStatus));
+        char loginTaskId[32] = "";
+        if (beginJson != nullptr) {
+            std::puts(beginJson);
+            findJsonValue(beginJson, "taskId", loginTaskId, sizeof(loginTaskId));
+            auracore_free(beginJson);
+        }
+        if (loginTaskId[0] != '\0') {
+            for (int attempt = 0; attempt < 20; ++attempt) {
+                char* infoJson = nullptr;
+                const auracore_status infoStatus = auracore_msa_login_info(backend, loginTaskId, &infoJson);
+                std::printf("--- msa-login-info attempt %d (status %d) ---\n", attempt, int(infoStatus));
+                if (infoJson != nullptr) {
+                    std::puts(infoJson);
+                    const bool issued = std::strstr(infoJson, "\"codeIssued\":true") != nullptr;
+                    auracore_free(infoJson);
+                    if (issued) {
+                        break;
+                    }
+                }
+                char* tickJson = nullptr;
+                auracore_wait_task(backend, loginTaskId, 1000, &tickJson);
+                if (tickJson != nullptr) {
+                    auracore_free(tickJson);
+                }
+            }
+            auracore_cancel_task(backend, loginTaskId);
+            std::printf("--- msa-login cancelled ---\n");
+        }
+    }
     auracore_backend_destroy(backend);
     return 0;
 }

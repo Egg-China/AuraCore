@@ -337,6 +337,9 @@ Backend::TrackedTaskPtr Backend::trackTask(const Task::Ptr& task, const QString&
     QObject::connect(task.get(), &Task::succeeded, [tracked] {
         tracked->finished = true;
         tracked->succeeded = true;
+        if (tracked->onSuccess) {
+            tracked->onSuccess();
+        }
     });
     QObject::connect(task.get(), &Task::failed, [tracked](const QString& reason) {
         tracked->finished = true;
@@ -688,6 +691,53 @@ QByteArray Backend::setDefaultAccount(const QString& profileName)
     m_lastError = QStringLiteral("Unknown account profile name: %1").arg(profileName);
     return {};
 }
+QByteArray Backend::beginMsaLogin()
+{
+    const auto account = MinecraftAccount::createBlankMSA();
+    const auto flow = account->login(true);
+    if (flow == nullptr) {
+        m_lastError = QStringLiteral("Could not start the Microsoft login flow");
+        return {};
+    }
+
+    const auto tracked = trackTask(flow, QStringLiteral("msa-login"));
+    QObject::connect(flow.get(), &AuthFlow::authorizeWithBrowserWithExtra, [tracked](const QUrl& url, const QString& code, int expiresIn) {
+        tracked->msaVerificationUrl = url.toString();
+        tracked->msaUserCode = code;
+        tracked->msaExpiresIn = expiresIn;
+    });
+    tracked->onSuccess = [this, account] { m_core->accounts()->addAccount(account); };
+    QMetaObject::invokeMethod(flow.get(), &Task::start, Qt::QueuedConnection);
+
+    const QString taskId = QString::number(m_nextTaskId - 1);
+    return toJson(QJsonDocument(QJsonObject{
+        { "started", true },
+        { "taskId", taskId },
+    }));
+}
+
+QByteArray Backend::msaLoginInfo(const QString& taskId)
+{
+    const auto it = m_tasks.constFind(taskId);
+    if (it == m_tasks.constEnd() || !it.value()) {
+        m_lastError = QStringLiteral("Unknown task id: %1").arg(taskId);
+        return {};
+    }
+    const auto& tracked = it.value();
+    if (tracked->msaUserCode.isEmpty()) {
+        return toJson(QJsonDocument(QJsonObject{
+            { "id", taskId },
+            { "codeIssued", false },
+        }));
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "id", taskId },
+        { "codeIssued", true },
+        { "verificationUrl", tracked->msaVerificationUrl },
+        { "userCode", tracked->msaUserCode },
+        { "expiresIn", tracked->msaExpiresIn },
+    }));
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -987,6 +1037,21 @@ auracore_status auracore_set_default_account(auracore_backend* backend, const ch
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->setDefaultAccount(QString::fromUtf8(profile_name)), out_json);
+}
+auracore_status auracore_begin_msa_login(auracore_backend* backend, char** out_json)
+{
+    if (backend == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->beginMsaLogin(), out_json);
+}
+
+auracore_status auracore_msa_login_info(auracore_backend* backend, const char* task_id, char** out_json)
+{
+    if (backend == nullptr || task_id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->msaLoginInfo(QString::fromUtf8(task_id)), out_json);
 }
 void auracore_free(char* text)
 {

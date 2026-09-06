@@ -146,6 +146,14 @@ AURACORE_BACKEND_API auracore_status auracore_remove_account(auracore_backend* b
 
 /* Selects the account future launches use by default. */
 AURACORE_BACKEND_API auracore_status auracore_set_default_account(auracore_backend* backend, const char* profile_name, char** out_json);
+/* Starts a Microsoft device-code login. The host shows the verification URL
+ * and user code (see auracore_msa_login_info); after the user approves, the
+ * task succeeds and the account is added automatically. */
+AURACORE_BACKEND_API auracore_status auracore_begin_msa_login(auracore_backend* backend, char** out_json);
+
+/* Returns { codeIssued, verificationUrl, userCode, expiresIn } for a login
+ * task, or { codeIssued: false } while the provider has not answered yet. */
+AURACORE_BACKEND_API auracore_status auracore_msa_login_info(auracore_backend* backend, const char* task_id, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 
