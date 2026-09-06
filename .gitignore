@@ -1,0 +1,14 @@
+# Build outputs
+/build/
+/deps/
+/build-*/
+
+# Local tooling logs
+aqtinstall.log
+
+# IDE / user files
+.idea/
+.vs/
+.vscode/
+*.user
+CMakeUserPresets.json

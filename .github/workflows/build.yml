@@ -1,0 +1,79 @@
+name: Build Core
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64-mingw
+            os: windows-latest
+          - name: linux-x64
+            os: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: >
+          sudo apt-get update && sudo apt-get install -y
+          ninja-build libarchive-dev zlib1g-dev
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Qt for Windows
+        if: runner.os == 'Windows'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: win64_mingw
+          tools: tools_mingw1310
+          add-tools-to-path: true
+          cache: true
+
+      - name: Install Qt for Linux
+        if: runner.os == 'Linux'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          cache: true
+
+      - name: Build static zlib and libarchive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci-windows-deps.ps1
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=gcc.exe -DCMAKE_CXX_COMPILER=g++.exe
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          "-DCMAKE_PREFIX_PATH=$env:RUNNER_TEMP\auracore-deps"
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+
+      - name: Build core
+        run: cmake --build build
+
+      - name: List build artifacts
+        shell: pwsh
+        run: Get-ChildItem build -Recurse -Include *.a,*.jar | Select-Object FullName, Length

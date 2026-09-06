@@ -4,7 +4,7 @@ find_package(Java 1.7 REQUIRED COMPONENTS Development)
 
 include(UseJava)
 set(CMAKE_JAVA_JAR_ENTRY_POINT org.prismlauncher.EntryPoint)
-set(CMAKE_JAVA_COMPILE_FLAGS -target 7 -source 7)
+set(CMAKE_JAVA_COMPILE_FLAGS --release 8)
 
 set(SRC
     org/prismlauncher/EntryPoint.java
@@ -40,5 +40,5 @@ set(LEGACY_SRC
 
 add_jar(NewLaunch ${SRC})
 add_jar(NewLaunchLegacy ${LEGACY_SRC} INCLUDE_JARS NewLaunch)
-install_jar(NewLaunch "${JARS_DEST_DIR}")
-install_jar(NewLaunchLegacy "${JARS_DEST_DIR}")
+install_jar(NewLaunch DESTINATION "jars")
+install_jar(NewLaunchLegacy DESTINATION "jars")
