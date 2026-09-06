@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 #include "net/HeaderProxy.h"
 
@@ -67,7 +67,7 @@ class ApiHeaderProxy : public HeaderProxy {
         QList<HeaderPair> hdrs;
         const auto host = request.url().host();
 
-        if (APPLICATION->capabilities() & Application::SupportsFlame &&
+        if (APPLICATION->capabilities() & CoreApplication::SupportsFlame &&
             (host == QUrl(BuildConfig.FLAME_BASE_URL).host() || host == BuildConfig.FLAME_DOWNLOAD_HOST)) {
             hdrs.append({ .headerName = "x-api-key", .headerValue = APPLICATION->getFlameAPIKey().toUtf8() });
         } else if (host == QUrl(BuildConfig.MODRINTH_PROD_URL).host() || host == QUrl(BuildConfig.MODRINTH_STAGING_URL).host()) {

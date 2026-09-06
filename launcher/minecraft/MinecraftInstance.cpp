@@ -36,7 +36,7 @@
  */
 
 #include "MinecraftInstance.h"
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 #include "Json.h"
 #include "QObjectPtr.h"
@@ -707,7 +707,7 @@ QProcessEnvironment MinecraftInstance::createLaunchEnvironment()
     QProcessEnvironment env = createEnvironment();
 
 #ifdef Q_OS_LINUX
-    if (settings()->get("EnableMangoHud").toBool() && APPLICATION->capabilities() & Application::SupportsMangoHud) {
+    if (settings()->get("EnableMangoHud").toBool() && APPLICATION->capabilities() & CoreApplication::SupportsMangoHud) {
         QStringList preloadList;
         if (auto value = env.value("LD_PRELOAD"); !value.isEmpty())
             preloadList = value.split(QLatin1String(":"));
@@ -840,16 +840,6 @@ QString MinecraftInstance::createLaunchScript(AuthSessionPtr session, MinecraftT
             if (!isLegacy()) {
                 auto screen = QGuiApplication::primaryScreen();
                 auto screenGeometry = screen->availableSize();
-
-                // small hack to get the widow decorations
-                for (auto w : QApplication::topLevelWidgets()) {
-                    auto mainWindow = qobject_cast<QMainWindow*>(w);
-                    if (mainWindow) {
-                        auto m = mainWindow->windowHandle()->frameMargins();
-                        screenGeometry = screenGeometry.shrunkBy(m);
-                        break;
-                    }
-                }
 
                 windowParams = QString("%1x%2").arg(screenGeometry.width()).arg(screenGeometry.height());
             } else {

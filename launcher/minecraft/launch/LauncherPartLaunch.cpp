@@ -38,7 +38,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Commandline.h"
 #include "FileSystem.h"
 #include "launch/LaunchTask.h"
@@ -150,7 +150,7 @@ void LauncherPartLaunch::executeTask()
     }
 
 #ifdef Q_OS_LINUX
-    if (instance->settings()->get("EnableFeralGamemode").toBool() && APPLICATION->capabilities() & Application::SupportsGameMode) {
+    if (instance->settings()->get("EnableFeralGamemode").toBool() && APPLICATION->capabilities() & CoreApplication::SupportsGameMode) {
         auto pid = m_process.processId();
         if (pid) {
             gamemode_request_start_for(pid);
