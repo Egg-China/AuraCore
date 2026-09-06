@@ -45,7 +45,10 @@
 #include "minecraft/MinecraftInstance.h"
 
 #ifdef Q_OS_LINUX
-#include "gamemode_client.h"
+#if __has_include(<gamemode_client.h>)
+#include <gamemode_client.h>
+#define AURACORE_HAVE_GAMEMODE
+#endif
 #endif
 
 LauncherPartLaunch::LauncherPartLaunch(LaunchTask* parent)
@@ -149,7 +152,7 @@ void LauncherPartLaunch::executeTask()
         m_process.start(javaPath, args);
     }
 
-#ifdef Q_OS_LINUX
+#ifdef AURACORE_HAVE_GAMEMODE
     if (instance->settings()->get("EnableFeralGamemode").toBool() && APPLICATION->capabilities() & CoreApplication::SupportsGameMode) {
         auto pid = m_process.processId();
         if (pid) {
