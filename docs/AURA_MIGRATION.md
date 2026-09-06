@@ -83,7 +83,7 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
   头less 创建默认 DownloadGameFilesDuringInstanceCreation=false，实例创建只写元数据，游戏文件留给启动时。
 - 严格离线：meta 无缓存时 `cached:false`，绝不触发网络（loadTask(Offline) 无文件会回源 + NetJob 自动重试死循环，
   ABI 侧用文件存在性守卫 + 30s 事件循环安全阀双保险）。
-### 阶段 3 —— 写路径（当前）
+### 阶段 3 —— 写路径（已完成）
 - [x] 在线元数据刷新（refresh_metadata / refresh_component，run 34018092685 双平台绿）
 - [x] 实例创建（auracore_create_instance + 通用异步任务面 task_status / wait_task / cancel_task，
   VanillaCreationTask 经 InstanceStaging 落盘 instance.cfg + mmc-pack.json，头less 默认只写元数据不下载游戏文件）
@@ -91,9 +91,9 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - [x] 实例删除（delete_instance：目录 + 快捷方式 + 分组成员，删除后重载列表）
 - [x] 实例导入导出（export_instance 导出 MultiMC 格式 zip；import_instance 支持本地路径与 http(s)，自动识别 MultiMC / Modrinth / CurseForge / Technic；e2e 全生命周期 create→rename→group→icon→export→delete→import→delete 全绿）
 - [x] 账户体系（list / add_offline / remove / set_default_account；begin_msa_login + msa_login_info 设备码流，微软真实端点签发 userCode，成功后自动入列）
-- [ ] 下载与镜像源策略
+- [x] 下载与镜像源策略（get_setting / set_setting 通用设置面：MetaURLOverride 可切 BMCLAPI 等镜像源，数值/布尔/字符串/字符串列表 JSON 往返，INI 立即持久化；e2e 实测镜像源写入读回 + 重置，commit 77c089aae）
 
-### 阶段 4 —— 启动流程与收尾（当前）
+### 阶段 4 —— 启动流程与收尾（当前，仅剩跨仓迁移）
 - [x] 启动参数组装与进程管理（launch_instance 全链头less：组件更新→认证→NewLaunch→游戏进程；stop_instance 终止运行中的游戏；离线账号直启修复 + 进度上报双重启动崩溃修复 + 三 jar 归一 build/jars；真实 e2e：javaw 游戏进程确认存活、任务 succeeded、无孤儿进程，commit b0c455020）
 - [x] 日志 / 崩溃收集回传双 UI（read_instance_logs 从运行中 LaunchTask 的环形 LogModel 取最新行，带 MessageLevel 级别 / running / total；e2e 实测游戏运行中读到 151 行真实输出：NewLaunch 参数、进程 ID、authlib 离线警告、纹理与声音引擎，commit 12a693db1）
 - [ ] HMCL 核心退役与数据迁移
