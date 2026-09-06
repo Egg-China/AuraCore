@@ -75,6 +75,8 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - `auracore_backend.dll/.so` 链接整个 auracore_core（全量符号经 DLL 链接补齐：archive / helpers / icons / meta JsonFormat /
   TaskStepWrapper / QuitAfterGameStop / JavaMetadata / PixmapCache::s_instance）。
 - `auracore-probe` CLI 冒烟工具：instances / java / probe-java / component-lists / component-versions 五查询 + create→wait→list 创建链，CI 已纳入运行。
+- 写路径 ABI：rename / set_group / set_icon / delete / export / import / list_accounts / add_offline_account / remove_account /
+  set_default_account / begin_msa_login / msa_login_info；list_instances / get_instance 附带 group 字段。
 - 异步任务面：create_instance 返回 taskId，宿主轮询 task_status / 同步等待 wait_task / 取消 cancel_task；
   任务登记表上限 32 条已完成记录，防止长生命周期宿主膨胀。
   CoreApplication 注册完整全局设置块（经脚本审计覆盖 BaseInstance / MinecraftInstance 引用的全部键），
@@ -85,9 +87,11 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - [x] 在线元数据刷新（refresh_metadata / refresh_component，run 34018092685 双平台绿）
 - [x] 实例创建（auracore_create_instance + 通用异步任务面 task_status / wait_task / cancel_task，
   VanillaCreationTask 经 InstanceStaging 落盘 instance.cfg + mmc-pack.json，头less 默认只写元数据不下载游戏文件）
-- [ ] 实例编辑 / 删除 / 导入导出
+- [x] 实例编辑（rename_instance 含物理目录改名 + 列表重载 / set_instance_group / set_instance_icon）
+- [x] 实例删除（delete_instance：目录 + 快捷方式 + 分组成员，删除后重载列表）
+- [x] 实例导入导出（export_instance 导出 MultiMC 格式 zip；import_instance 支持本地路径与 http(s)，自动识别 MultiMC / Modrinth / CurseForge / Technic；e2e 全生命周期 create→rename→group→icon→export→delete→import→delete 全绿）
+- [x] 账户体系（list / add_offline / remove / set_default_account；begin_msa_login + msa_login_info 设备码流，微软真实端点签发 userCode，成功后自动入列）
 - [ ] 下载与镜像源策略
-- [ ] 账户体系（微软登录、离线档案）
 
 ### 阶段 4 —— 启动流程与收尾
 - [ ] 启动参数组装与进程管理
