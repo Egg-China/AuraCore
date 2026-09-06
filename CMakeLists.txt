@@ -17,6 +17,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# The core static archives are also linked into the shared backend library.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Concurrent Core Gui Network NetworkAuth Widgets Xml)
 find_package(ZLIB REQUIRED)
 find_package(LibArchive REQUIRED)
@@ -31,8 +34,13 @@ if(NOT tomlplusplus_FOUND)
     FetchContent_MakeAvailable(tomlplusplus)
 endif()
 
+add_subdirectory(corebackend)
 add_subdirectory(launcher)
 add_subdirectory(buildconfig)
+# Vendored libnbt++ ships CxxTest-based tests that AuraCore does not run;
+# Linux CI hosts have no CxxTest package and would fail configuration.
+set(NBT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(libraries/javacheck)
 add_subdirectory(libraries/libnbtplusplus)
 add_subdirectory(libraries/murmur2)

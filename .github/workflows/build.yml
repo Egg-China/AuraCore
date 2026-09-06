@@ -61,21 +61,35 @@ jobs:
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: '3.5'
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER=gcc.exe -DCMAKE_CXX_COMPILER=g++.exe
-          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           "-DCMAKE_PREFIX_PATH=$env:RUNNER_TEMP\auracore-deps"
 
       - name: Configure (Linux)
         if: runner.os == 'Linux'
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: '3.5'
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
       - name: Build core
         run: cmake --build build
 
+      - name: Run read-only probe smoke test
+        shell: pwsh
+        run: |
+          $isWindows = $IsWindows -or $env:OS -eq 'Windows_NT'
+          $binary = if ($isWindows) { 'build/corebackend/auracore-probe.exe' } else { 'build/corebackend/auracore-probe' }
+          $dataDir = Join-Path $env:RUNNER_TEMP 'auracore-probe-data'
+          if ($isWindows) {
+            $env:PATH = "$env:RUNNER_TEMP\auracore-deps\bin;$env:PATH"
+          }
+          & $binary --data $dataDir
+          if ($LASTEXITCODE -ne 0) { throw "probe exited with $LASTEXITCODE" }
+
       - name: List build artifacts
         shell: pwsh
-        run: Get-ChildItem build -Recurse -Include *.a,*.jar | Select-Object FullName, Length
+        run: Get-ChildItem build -Recurse -Include *.dll,*.so,*.a,*.jar | Select-Object FullName, Length

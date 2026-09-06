@@ -98,6 +98,8 @@ set(AURACORE_CORE_SOURCES
     java/JavaInstallList.cpp
     java/JavaUtils.h
     java/JavaUtils.cpp
+    java/JavaMetadata.h
+    java/JavaMetadata.cpp
     java/JavaVersion.h
     java/JavaVersion.cpp
     java/download/ArchiveDownloadTask.h
@@ -111,6 +113,8 @@ set(AURACORE_CORE_SOURCES
     launch/LaunchTask.cpp
     launch/LogModel.h
     launch/LogModel.cpp
+    launch/TaskStepWrapper.h
+    launch/TaskStepWrapper.cpp
     launch/steps/CheckJava.cpp
     launch/steps/CheckJava.h
     launch/steps/LookupServerAddress.cpp
@@ -121,6 +125,8 @@ set(AURACORE_CORE_SOURCES
     launch/steps/PreLaunchCommand.h
     launch/steps/PrintServers.cpp
     launch/steps/PrintServers.h
+    launch/steps/QuitAfterGameStop.cpp
+    launch/steps/QuitAfterGameStop.h
     launch/steps/TextPrint.cpp
     launch/steps/TextPrint.h
 
@@ -153,6 +159,13 @@ set(AURACORE_CORE_SOURCES
 
     meta/BaseEntity.h
     meta/BaseEntity.cpp
+    icons/IconList.h
+    icons/IconList.cpp
+    icons/MMCIcon.h
+    icons/IconUtils.h
+    icons/IconUtils.cpp
+    meta/JsonFormat.h
+    meta/JsonFormat.cpp
     meta/Index.h
     meta/Index.cpp
     meta/Version.h
@@ -212,6 +225,11 @@ file(GLOB AURACORE_MINECRAFT_SOURCES CONFIGURE_DEPENDS
     minecraft/update/*.h
 )
 
+file(GLOB AURACORE_ARCHIVE_SOURCES CONFIGURE_DEPENDS
+    archive/*.cpp
+    archive/*.h
+)
+
 file(GLOB AURACORE_MODPLATFORM_SOURCES CONFIGURE_DEPENDS
     modplatform/*.cpp
     modplatform/*.h
@@ -219,6 +237,8 @@ file(GLOB AURACORE_MODPLATFORM_SOURCES CONFIGURE_DEPENDS
     modplatform/atlauncher/*.h
     modplatform/flame/*.cpp
     modplatform/flame/*.h
+    modplatform/helpers/*.cpp
+    modplatform/helpers/*.h
     modplatform/ftb/*.cpp
     modplatform/ftb/*.h
     modplatform/legacy_ftb/*.cpp
@@ -233,6 +253,7 @@ file(GLOB AURACORE_MODPLATFORM_SOURCES CONFIGURE_DEPENDS
 
 add_library(auracore_core STATIC
     ${AURACORE_CORE_SOURCES}
+    ${AURACORE_ARCHIVE_SOURCES}
     ${AURACORE_MINECRAFT_SOURCES}
     ${AURACORE_MODPLATFORM_SOURCES}
 )
