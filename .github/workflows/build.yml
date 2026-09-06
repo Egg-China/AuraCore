@@ -81,10 +81,10 @@ jobs:
       - name: Run read-only probe smoke test
         shell: pwsh
         run: |
-          $isWindows = $IsWindows -or $env:OS -eq 'Windows_NT'
-          $binary = if ($isWindows) { 'build/corebackend/auracore-probe.exe' } else { 'build/corebackend/auracore-probe' }
+          $onWindows = $IsWindows -or $env:OS -eq 'Windows_NT'
+          $binary = if ($onWindows) { 'build/corebackend/auracore-probe.exe' } else { 'build/corebackend/auracore-probe' }
           $dataDir = Join-Path $env:RUNNER_TEMP 'auracore-probe-data'
-          if ($isWindows) {
+          if ($onWindows) {
             $env:PATH = "$env:RUNNER_TEMP\auracore-deps\bin;$env:PATH"
           }
           & $binary --data $dataDir
