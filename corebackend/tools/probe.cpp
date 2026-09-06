@@ -70,7 +70,16 @@ int main(int argc, char** argv)
 
     printQuery("instances", backend, auracore_list_instances);
     printQuery("java", backend, auracore_detect_java);
+    printQuery("probe-java", backend, auracore_probe_java);
     printQuery("component-lists", backend, auracore_list_component_lists);
+
+    char* versionJson = nullptr;
+    const auracore_status versionStatus = auracore_list_component_versions(backend, "net.minecraft", &versionJson);
+    std::printf("--- component-versions net.minecraft (status %d) ---\n", int(versionStatus));
+    if (versionJson != nullptr) {
+        std::puts(versionJson);
+        auracore_free(versionJson);
+    }
 
     auracore_backend_destroy(backend);
     return 0;

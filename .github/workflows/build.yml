@@ -87,6 +87,7 @@ jobs:
           if ($onWindows) {
             $env:PATH = "$env:RUNNER_TEMP\auracore-deps\bin;$env:PATH"
           }
+          $env:AURACORE_JARS_DIR = Join-Path $env:GITHUB_WORKSPACE 'build/libraries/javacheck'
           & $binary --data $dataDir
           if ($LASTEXITCODE -ne 0) { throw "probe exited with $LASTEXITCODE" }
 

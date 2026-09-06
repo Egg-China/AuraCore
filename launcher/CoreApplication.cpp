@@ -355,6 +355,11 @@ QString CoreApplication::getJarPath(QString jarFile)
 {
     QStringList potentialPaths = { FS::PathCombine(m_rootPath, "jars"), FS::PathCombine(QCoreApplication::applicationDirPath(), "jars"),
                                    FS::PathCombine(QCoreApplication::applicationDirPath(), "..", "jars") };
+    // Hosts and test harnesses may relocate the jar bundle.
+    const QString overrideDir = qEnvironmentVariable("AURACORE_JARS_DIR");
+    if (!overrideDir.isEmpty()) {
+        potentialPaths.prepend(overrideDir);
+    }
     for (const QString& p : potentialPaths) {
         QString jarPath = FS::PathCombine(p, jarFile);
         if (QFileInfo(jarPath).isFile()) {

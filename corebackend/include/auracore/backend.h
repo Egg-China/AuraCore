@@ -78,6 +78,15 @@ AURACORE_BACKEND_API auracore_status auracore_detect_java(auracore_backend* back
  * No network access is performed. */
 AURACORE_BACKEND_API auracore_status auracore_list_component_lists(auracore_backend* backend, char** out_json);
 
+/* Runs the real Java executable behind every detected candidate and returns
+ * { path, version, vendor, arch } entries (or { path, error } when the
+ * check fails). Requires JavaCheck.jar, discoverable through the
+ * AURACORE_JARS_DIR environment override or the core's default jar paths. */
+AURACORE_BACKEND_API auracore_status auracore_probe_java(auracore_backend* backend, char** out_json);
+
+/* Returns the cached version list of one component uid as
+ * { uid, cached: bool, versions: [...] }. No network access is performed. */
+AURACORE_BACKEND_API auracore_status auracore_list_component_versions(auracore_backend* backend, const char* uid, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

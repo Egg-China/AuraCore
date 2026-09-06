@@ -22,6 +22,7 @@
 #include <QString>
 
 #include <memory>
+#include "tasks/Task.h"
 
 class CoreApplication;
 
@@ -39,12 +40,15 @@ class Backend {
     QByteArray listInstances();
     QByteArray getInstance(const QString& id);
     QByteArray detectJava();
+    QByteArray probeJava();
     QByteArray listComponentLists();
+    QByteArray listComponentVersions(const QString& uid);
 
    private:
     explicit Backend(std::unique_ptr<CoreApplication> core);
 
     bool loadMetaCache();
+    static bool runTaskSync(const Task::Ptr& task);
 
     std::unique_ptr<CoreApplication> m_core;
     QString m_lastError;

@@ -37,6 +37,7 @@
 #include "CoreApplication.h"
 #include "BaseInstance.h"
 #include "InstanceList.h"
+#include "java/JavaChecker.h"
 #include "java/JavaUtils.h"
 #include "meta/Index.h"
 #include "meta/Version.h"
@@ -55,6 +56,15 @@ QByteArray toJson(const QJsonDocument& document)
     return document.toJson(QJsonDocument::Compact);
 }
 
+QJsonObject versionToJson(const Meta::Version::Ptr& version)
+{
+    return QJsonObject{
+        { "version", version->version() },
+        { "type", version->type() },
+        { "releaseTime", version->time().toString(Qt::ISODate) },
+        { "recommended", version->isRecommended() },
+    };
+}
 QJsonObject instanceToJson(MinecraftInstance* instance)
 {
     QJsonObject object;
@@ -137,6 +147,24 @@ QByteArray Backend::detectJava()
     return toJson(QJsonDocument(array));
 }
 
+bool Backend::runTaskSync(const Task::Ptr& task)
+{
+    QEventLoop loop;
+    bool succeeded = false;
+    QObject::connect(task.get(), &Task::succeeded, &loop, [&succeeded] { succeeded = true; });
+    QObject::connect(task.get(), &Task::failed, &loop, &QEventLoop::quit);
+    QObject::connect(task.get(), &Task::aborted, &loop, &QEventLoop::quit);
+    task->start();
+    // Synchronous tasks complete during start(); entering exec() then would
+    // wait forever because quit() fired before the loop began. Corrupt meta
+    // caches also fall back to the network with endless retries, so the loop
+    // carries a safety valve regardless.
+    QTimer::singleShot(30000, &loop, &QEventLoop::quit);
+    if (!task->isFinished()) {
+        loop.exec();
+    }
+    return succeeded;
+}
 bool Backend::loadMetaCache()
 {
     if (m_metaLoaded) {
@@ -156,24 +184,9 @@ bool Backend::loadMetaCache()
         return m_metaLoaded;
     }
 
-    QEventLoop loop;
-    bool loadedFromDisk = false;
-    QObject::connect(task.get(), &Task::succeeded, &loop, [&loadedFromDisk] { loadedFromDisk = true; });
-    QObject::connect(task.get(), &Task::failed, &loop, &QEventLoop::quit);
-    QObject::connect(task.get(), &Task::aborted, &loop, &QEventLoop::quit);
-    task->start();
-    // Synchronous tasks complete during start(); entering exec() then would
-    // wait forever because quit() fired before the loop began. A corrupt
-    // cache also falls back to the network with endless retries, so the
-    // loop carries a safety valve regardless.
-    QTimer::singleShot(30000, &loop, &QEventLoop::quit);
-    if (!task->isFinished()) {
-        loop.exec();
-    }
-
     // Index() seeds the well-known uid registry even without a cache file,
     // so the flag must reflect an actual index.json load, not list presence.
-    m_metaLoaded = loadedFromDisk;
+    m_metaLoaded = runTaskSync(task);
     return m_metaLoaded;
 }
 
@@ -185,12 +198,7 @@ QByteArray Backend::listComponentLists()
     for (const auto& versionList : index->lists()) {
         QJsonArray versions;
         for (const auto& version : versionList->versions()) {
-            versions.append(QJsonObject{
-                { "version", version->version() },
-                { "type", version->type() },
-                { "releaseTime", version->time().toString(Qt::ISODate) },
-                { "recommended", version->isRecommended() },
-            });
+            versions.append(versionToJson(version));
         }
         lists.append(QJsonObject{
             { "uid", versionList->uid() },
@@ -201,6 +209,81 @@ QByteArray Backend::listComponentLists()
     return toJson(QJsonDocument(QJsonObject{ { "cached", cached }, { "lists", lists } }));
 }
 
+QByteArray Backend::probeJava()
+{
+    JavaUtils utils;
+    QStringList candidates;
+    QSet<QString> seen;
+    for (const auto& path : utils.FindJavaPaths()) {
+        // Raw scans may yield registry stubs or PATH candidates that do not
+        // exist; only executables the host can actually spawn are probed.
+        if (path.isEmpty() || !QFileInfo::exists(path) || seen.contains(path)) {
+            continue;
+        }
+        seen.insert(path);
+        candidates.append(path);
+        // Keep the synchronous ABI bounded; large PATH scans are rare.
+        if (candidates.size() >= 8) {
+            break;
+        }
+    }
+
+    QJsonArray array;
+    for (int i = 0; i < candidates.size(); ++i) {
+        JavaChecker checker(candidates.at(i), "", 128, 512, 64, i);
+        QEventLoop loop;
+        JavaChecker::Result result;
+        QObject::connect(&checker, &JavaChecker::checkFinished, &loop, [&loop, &result](const JavaChecker::Result& payload) {
+            result = payload;
+            loop.quit();
+        });
+        QObject::connect(&checker, &Task::failed, &loop, &QEventLoop::quit);
+        QObject::connect(&checker, &Task::aborted, &loop, &QEventLoop::quit);
+        checker.start();
+        QTimer::singleShot(20000, &loop, &QEventLoop::quit);
+        if (!checker.isFinished()) {
+            loop.exec();
+        }
+
+        QJsonObject entry{ { "path", candidates.at(i) } };
+        if (result.validity == JavaChecker::Result::Validity::Valid) {
+            entry.insert("version", result.javaVersion.toString());
+            entry.insert("vendor", result.javaVendor);
+            entry.insert("arch", result.is_64bit ? "x64" : "x86");
+        } else {
+            entry.insert("version", QJsonValue());
+            entry.insert("error", result.errorLog.isEmpty() ? result.outLog : result.errorLog);
+        }
+        array.append(entry);
+    }
+    return toJson(QJsonDocument(array));
+}
+
+QByteArray Backend::listComponentVersions(const QString& uid)
+{
+    auto* index = m_core->metadataIndex();
+    // The uid registry only fills after index.json loads; the cache file is
+    // the authoritative signal, so unknown-but-cached uids still resolve.
+    const auto versionList = index->get(uid);
+    const QString cacheFile = QDir("meta").absoluteFilePath(versionList->localFilename());
+    if (!QFile::exists(cacheFile)) {
+        return toJson(QJsonDocument(QJsonObject{
+            { "uid", uid },
+            { "cached", false },
+            { "versions", QJsonArray() },
+        }));
+    }
+    const bool loaded = runTaskSync(versionList->loadTask(Net::Mode::Offline));
+    QJsonArray versions;
+    for (const auto& version : versionList->versions()) {
+        versions.append(versionToJson(version));
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "uid", uid },
+        { "cached", loaded },
+        { "versions", versions },
+    }));
+}
 }  // namespace AuraCore
 
 struct auracore_backend {
@@ -293,6 +376,21 @@ auracore_status auracore_list_component_lists(auracore_backend* backend, char** 
     return writeJson(backend->backend->listComponentLists(), out_json);
 }
 
+auracore_status auracore_list_component_versions(auracore_backend* backend, const char* uid, char** out_json)
+{
+    if (backend == nullptr || uid == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->listComponentVersions(QString::fromUtf8(uid)), out_json);
+}
+
+auracore_status auracore_probe_java(auracore_backend* backend, char** out_json)
+{
+    if (backend == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->probeJava(), out_json);
+}
 void auracore_free(char* text)
 {
     free(text);
