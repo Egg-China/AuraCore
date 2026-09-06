@@ -364,6 +364,35 @@ int main(int argc, char** argv)
             std::printf("--- msa-login cancelled ---\n");
         }
     }
+    {
+        auto querySetting = [backend](const char* label, const char* key) {
+            char* json = nullptr;
+            const auracore_status status = auracore_get_setting(backend, key, &json);
+            std::printf("--- get-setting %s (status %d) ---\n", label, int(status));
+            if (json != nullptr) {
+                std::puts(json);
+                auracore_free(json);
+            }
+        };
+        querySetting("meta-url-before", "MetaURLOverride");
+        querySetting("concurrent-tasks", "NumberOfConcurrentTasks");
+
+        char* setJson = nullptr;
+        const auracore_status setStatus =
+            auracore_set_setting(backend, "MetaURLOverride", "{\"value\":\"https://bmclapi2.bangbang93.com/metadata\"}", &setJson);
+        std::printf("--- set-setting meta-url (status %d) ---\n", int(setStatus));
+        if (setJson != nullptr) {
+            std::puts(setJson);
+            auracore_free(setJson);
+        }
+        querySetting("meta-url-after", "MetaURLOverride");
+
+        char* resetJson = nullptr;
+        auracore_set_setting(backend, "MetaURLOverride", "{\"value\":\"\"}", &resetJson);
+        if (resetJson != nullptr) {
+            auracore_free(resetJson);
+        }
+    }
     auracore_backend_destroy(backend);
     return 0;
 }

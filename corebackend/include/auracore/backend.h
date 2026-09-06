@@ -171,6 +171,14 @@ AURACORE_BACKEND_API auracore_status auracore_stop_instance(auracore_backend* ba
  * model (max_lines <= 0 means 200, hard cap 2000). Returns
  * { id, running, total, logs: [{ level, line }] }. */
 AURACORE_BACKEND_API auracore_status auracore_read_instance_logs(auracore_backend* backend, const char* id, int max_lines, char** out_json);
+/* Reads one registered core setting (includes MetaURLOverride and the
+ * concurrency knobs). Returns { key, value } with bool/number/string/list
+ * JSON values. */
+AURACORE_BACKEND_API auracore_status auracore_get_setting(auracore_backend* backend, const char* key, char** out_json);
+
+/* Writes one registered core setting. json_value is an object of the shape
+ * {"value": <json>}; the INI store persists immediately. */
+AURACORE_BACKEND_API auracore_status auracore_set_setting(auracore_backend* backend, const char* key, const char* json_value, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

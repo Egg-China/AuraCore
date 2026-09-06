@@ -852,6 +852,76 @@ QByteArray Backend::instanceLogs(const QString& id, int maxLines)
         { "logs", logs },
     }));
 }
+static QJsonValue variantToJson(const QVariant& value)
+{
+    switch (value.userType()) {
+        case QMetaType::Bool:
+            return value.toBool();
+        case QMetaType::Int:
+        case QMetaType::LongLong:
+            return double(value.toLongLong());
+        case QMetaType::UInt:
+        case QMetaType::ULongLong:
+            return double(value.toULongLong());
+        case QMetaType::Float:
+        case QMetaType::Double:
+            return value.toDouble();
+        case QMetaType::QString:
+            return value.toString();
+        case QMetaType::QStringList: {
+            QJsonArray array;
+            for (const auto& entry : value.toStringList()) {
+                array.append(entry);
+            }
+            return array;
+        }
+        default:
+            return value.toString();
+    }
+}
+
+QByteArray Backend::getSetting(const QString& key)
+{
+    if (m_core->settings()->getSetting(key) == nullptr) {
+        m_lastError = QStringLiteral("Unknown setting key: %1").arg(key);
+        return {};
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "key", key },
+        { "value", variantToJson(m_core->settings()->get(key)) },
+    }));
+}
+
+QByteArray Backend::setSetting(const QString& key, const QJsonValue& value)
+{
+    auto* settings = m_core->settings();
+    if (settings->getSetting(key) == nullptr) {
+        m_lastError = QStringLiteral("Unknown setting key: %1").arg(key);
+        return {};
+    }
+    QVariant variant;
+    if (value.isString()) {
+        variant = value.toString();
+    } else if (value.isDouble()) {
+        variant = value.toDouble();
+    } else if (value.isBool()) {
+        variant = value.toBool();
+    } else if (value.isArray()) {
+        QStringList list;
+        for (const auto& entry : value.toArray()) {
+            list.append(entry.toString());
+        }
+        variant = list;
+    } else {
+        m_lastError = QStringLiteral("Unsupported setting value type for key: %1").arg(key);
+        return {};
+    }
+    settings->set(key, variant);
+    return toJson(QJsonDocument(QJsonObject{
+        { "key", key },
+        { "value", variantToJson(settings->get(key)) },
+    }));
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -1194,6 +1264,29 @@ auracore_status auracore_read_instance_logs(auracore_backend* backend, const cha
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->instanceLogs(QString::fromUtf8(id), max_lines), out_json);
+}
+auracore_status auracore_get_setting(auracore_backend* backend, const char* key, char** out_json)
+{
+    if (backend == nullptr || key == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->getSetting(QString::fromUtf8(key)), out_json);
+}
+
+auracore_status auracore_set_setting(auracore_backend* backend, const char* key, const char* json_value, char** out_json)
+{
+    if (backend == nullptr || key == nullptr || json_value == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const auto document = QJsonDocument::fromJson(QByteArray(json_value));
+    if (!document.isObject()) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const auto object = document.object();
+    if (!object.contains("value")) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->setSetting(QString::fromUtf8(key), object.value("value")), out_json);
 }
 void auracore_free(char* text)
 {

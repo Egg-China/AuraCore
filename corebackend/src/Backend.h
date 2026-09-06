@@ -64,6 +64,8 @@ class Backend {
     QByteArray launchInstance(const QString& id, const QString& accountProfile, const QString& offlineName);
     QByteArray stopInstance(const QString& id);
     QByteArray instanceLogs(const QString& id, int maxLines);
+    QByteArray getSetting(const QString& key);
+    QByteArray setSetting(const QString& key, const QJsonValue& value);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);
