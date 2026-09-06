@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QHash>
 #include <QString>
 
 #include <memory>
@@ -46,15 +47,39 @@ class Backend {
     QByteArray refreshMetadata();
     QByteArray refreshComponent(const QString& uid);
 
+    QByteArray createInstance(const QString& name, const QString& gameVersion, const QString& group);
+    QByteArray taskStatus(const QString& taskId);
+    QByteArray waitTask(const QString& taskId, int timeoutMs);
+    bool cancelTask(const QString& taskId);
+
    private:
     explicit Backend(std::unique_ptr<CoreApplication> core);
 
     bool loadMetaCache();
+
+    struct TrackedTask {
+        Task::Ptr task;
+        QString type;
+        bool finished = false;
+        bool succeeded = false;
+        bool aborted = false;
+        QString error;
+        QString status;
+        qint64 progress = 0;
+        qint64 progressTotal = 0;
+    };
+    using TrackedTaskPtr = std::shared_ptr<TrackedTask>;
+
+    TrackedTaskPtr trackTask(const Task::Ptr& task, const QString& type);
+    void pruneFinishedTasks();
     static bool runTaskSync(const Task::Ptr& task, int valveMs = 30000);
 
     std::unique_ptr<CoreApplication> m_core;
     QString m_lastError;
     bool m_metaLoaded = false;
+
+    QHash<QString, TrackedTaskPtr> m_tasks;
+    int m_nextTaskId = 1;
 };
 
 }  // namespace AuraCore

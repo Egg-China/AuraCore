@@ -94,6 +94,25 @@ AURACORE_BACKEND_API auracore_status auracore_refresh_metadata(auracore_backend*
 
 /* Refreshes one component's version list (meta/<uid>/index.json). */
 AURACORE_BACKEND_API auracore_status auracore_refresh_component(auracore_backend* backend, const char* uid, char** out_json);
+/* Starts creation of a vanilla instance and returns { created, taskId, ... }
+ * or { created: false, error }. group may be NULL. The task runs on the
+ * core's event loop; poll with auracore_task_status, wait synchronously with
+ * auracore_wait_task, or cancel through auracore_cancel_task. */
+AURACORE_BACKEND_API auracore_status auracore_create_instance(auracore_backend* backend,
+                                                              const char* name,
+                                                              const char* game_version,
+                                                              const char* group,
+                                                              char** out_json);
+
+/* Returns { id, type, state, progress, total, status, succeeded?, error? }. */
+AURACORE_BACKEND_API auracore_status auracore_task_status(auracore_backend* backend, const char* task_id, char** out_json);
+
+/* Pumps the core event loop until the task finishes or timeout_ms elapses,
+ * then returns the final status snapshot. */
+AURACORE_BACKEND_API auracore_status auracore_wait_task(auracore_backend* backend, const char* task_id, int timeout_ms, char** out_json);
+
+/* Requests cancellation; returns OK when the task accepted the abort. */
+AURACORE_BACKEND_API auracore_status auracore_cancel_task(auracore_backend* backend, const char* task_id);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

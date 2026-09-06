@@ -52,6 +52,7 @@
 #include "meta/Index.h"
 #include "minecraft/MinecraftInstance.h"
 #include "settings/INISettingsObject.h"
+#include "SysInfo.h"
 #include "settings/Setting.h"
 #include "settings/SettingsObject.h"
 
@@ -174,6 +175,8 @@ void CoreApplication::registerCoreSettings()
     m_settings->registerSetting("RequestTimeout", 60);
     m_settings->registerSetting("UserAgentOverride", QString());
     m_settings->registerSetting("MetaRefreshOnLaunch", true);
+    m_settings->registerSetting("CloseAfterLaunch", false);
+    m_settings->registerSetting("QuitAfterGameStop", false);
     m_settings->registerSetting("MetaURLOverride", QString());
     m_settings->registerSetting("MSAClientIDOverride", QString());
     m_settings->registerSetting("FlameKeyOverride", QString());
@@ -181,22 +184,99 @@ void CoreApplication::registerCoreSettings()
 
     // Proxy
     m_settings->registerSetting("ProxyType", "None");
-    m_settings->registerSetting("ProxyAddr", "127.0.0.1");
+    m_settings->registerSetting({ "ProxyAddr", "ProxyHostName" }, "127.0.0.1");
     m_settings->registerSetting("ProxyPort", 8080);
-    m_settings->registerSetting("ProxyUser", QString());
-    m_settings->registerSetting("ProxyPass", QString());
+    m_settings->registerSetting({ "ProxyUser", "ProxyUsername" }, QString());
+    m_settings->registerSetting({ "ProxyPass", "ProxyPassword" }, QString());
 
     // Folders
     m_settings->registerSetting("InstanceDir", "instances");
     m_settings->registerSetting("AdditionalInstanceDirs", QVariant(QStringList()));
-    m_settings->registerSetting("CentralModsDir", "mods");
+    m_settings->registerSetting("LastUsedGroupForNewInstance", QString());
+    m_settings->registerSetting("LastUsedInstDirForNewInstance", "");
+    m_settings->registerSetting({ "CentralModsDir", "ModsDir" }, "mods");
     m_settings->registerSetting("IconsDir", "icons");
     m_settings->registerSetting("DownloadsDir", QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
+    m_settings->registerSetting("DownloadsDirWatchRecursive", false);
+    m_settings->registerSetting("MoveModsFromDownloadsDir", false);
     m_settings->registerSetting("SkinsDir", "skins");
     m_settings->registerSetting("JavaDir", "java");
 
-    // Login/launch state needed by core flows
+    // Console behaviour (BaseInstance overrides these)
+    m_settings->registerSetting("ConsoleMaxLines", 100000);
+    m_settings->registerSetting("ConsoleOverflowStop", true);
+    m_settings->registerSetting("ShowConsole", false);
+    m_settings->registerSetting("AutoCloseConsole", false);
+    m_settings->registerSetting("ShowConsoleOnError", true);
+    m_settings->registerSetting("LogPrePostOutput", true);
+
+    // Window size defaults
+    m_settings->registerSetting({ "LaunchMaximized", "MCWindowMaximize" }, false);
+    m_settings->registerSetting({ "MinecraftWinWidth", "MCWindowWidth" }, 854);
+    m_settings->registerSetting({ "MinecraftWinHeight", "MCWindowHeight" }, 480);
+
+    // Memory
+    m_settings->registerSetting({ "MinMemAlloc", "MinMemoryAlloc" }, 512);
+    m_settings->registerSetting({ "MaxMemAlloc", "MaxMemoryAlloc" }, SysInfo::defaultMaxJvmMem());
+    m_settings->registerSetting("PermGen", 128);
+    m_settings->registerSetting("LowMemWarning", true);
+
+    // Java settings
+    m_settings->registerSetting("JavaPath", "");
+    m_settings->registerSetting("JavaSignature", "");
+    m_settings->registerSetting("JavaArchitecture", "");
+    m_settings->registerSetting("JavaRealArchitecture", "");
+    m_settings->registerSetting("JavaVersion", "");
+    m_settings->registerSetting("JavaVendor", "");
+    m_settings->registerSetting("LastHostname", "");
+    m_settings->registerSetting("JvmArgs", "");
+    m_settings->registerSetting("IgnoreJavaCompatibility", false);
+    m_settings->registerSetting("IgnoreJavaWizard", false);
+    const auto defaultEnableAutoJava = m_settings->get("JavaPath").toString().isEmpty();
+    m_settings->registerSetting("AutomaticJavaSwitch", defaultEnableAutoJava);
+    m_settings->registerSetting("AutomaticJavaDownload", defaultEnableAutoJava);
+    m_settings->registerSetting("UserAskedAboutAutomaticJavaDownload", false);
+
+    // Legacy settings
+    m_settings->registerSetting("OnlineFixes", false);
+
+    // Native library workarounds
+    m_settings->registerSetting("UseNativeOpenAL", false);
+    m_settings->registerSetting("CustomOpenALPath", "");
+    m_settings->registerSetting("UseNativeGLFW", false);
+    m_settings->registerSetting("CustomGLFWPath", "");
+    m_settings->registerSetting("UseNativeSDL", false);
+    m_settings->registerSetting("CustomSDLPath", "");
+
+    // Performance related options
+    m_settings->registerSetting("EnableFeralGamemode", false);
+    m_settings->registerSetting("EnableMangoHud", false);
+    m_settings->registerSetting("UseDiscreteGpu", false);
+    m_settings->registerSetting("UseZink", false);
+
+    // Game time
+    m_settings->registerSetting("ShowGameTime", true);
+    m_settings->registerSetting("ShowGlobalGameTime", true);
+    m_settings->registerSetting("RecordGameTime", true);
+    m_settings->registerSetting("ShowGameTimeWithoutDays", false);
+
+    // Minecraft mods
+    m_settings->registerSetting("ModMetadataDisabled", false);
+    m_settings->registerSetting("ModDependenciesDisabled", false);
+    m_settings->registerSetting("SkipModpackUpdatePrompt", false);
+    m_settings->registerSetting("ShowModIncompat", false);
+    m_settings->registerSetting("DownloadGameFilesDuringInstanceCreation", false);
+
+    // Minecraft offline player name
     m_settings->registerSetting("LastOfflinePlayerName", QString());
+
+    // Wrapper command for launch
+    m_settings->registerSetting("WrapperCommand", "");
+    m_settings->registerSetting("Env", "{}");
+
+    // Custom commands (BaseInstance overrides these)
+    m_settings->registerSetting({ "PreLaunchCommand", "PreLaunchCmd" }, "");
+    m_settings->registerSetting({ "PostExitCommand", "PostExitCmd" }, "");
 
     // Playtime is tracked in a machine-local file, independently of
     // machine-specific configuration.

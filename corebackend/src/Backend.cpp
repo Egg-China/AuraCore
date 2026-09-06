@@ -23,6 +23,7 @@
 #include <QFile>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QTimer>
 #include <QJsonArray>
@@ -30,6 +31,7 @@
 #include <QJsonObject>
 
 #include <cstdlib>
+#include <algorithm>
 #include <cstring>
 
 #include "auracore/backend.h"
@@ -41,6 +43,7 @@
 #include "java/JavaUtils.h"
 #include "meta/Index.h"
 #include "meta/Version.h"
+#include "minecraft/VanillaInstanceCreationTask.h"
 #include "meta/VersionList.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
@@ -316,6 +319,157 @@ QByteArray Backend::refreshComponent(const QString& uid)
     }
     return toJson(QJsonDocument(object));
 }
+Backend::TrackedTaskPtr Backend::trackTask(const Task::Ptr& task, const QString& type)
+{
+    auto tracked = std::make_shared<TrackedTask>();
+    tracked->task = task;
+    tracked->type = type;
+
+    QObject::connect(task.get(), &Task::succeeded, [tracked] {
+        tracked->finished = true;
+        tracked->succeeded = true;
+    });
+    QObject::connect(task.get(), &Task::failed, [tracked](const QString& reason) {
+        tracked->finished = true;
+        tracked->error = reason;
+    });
+    QObject::connect(task.get(), &Task::aborted, [tracked] {
+        tracked->finished = true;
+        tracked->aborted = true;
+    });
+    QObject::connect(task.get(), &Task::progress,
+                     [tracked](qint64 current, qint64 total) {
+                         tracked->progress = current;
+                         tracked->progressTotal = total;
+                     });
+    QObject::connect(task.get(), &Task::status, [tracked](const QString& status) { tracked->status = status; });
+
+    const QString id = QString::number(m_nextTaskId++);
+    m_tasks.insert(id, tracked);
+    pruneFinishedTasks();
+    return tracked;
+}
+
+void Backend::pruneFinishedTasks()
+{
+    // Keep the bookkeeping bounded for long-lived host processes.
+    while (m_tasks.size() > 32) {
+        const auto oldest = std::min_element(m_tasks.keyValueBegin(), m_tasks.keyValueEnd(),
+                                             [](const auto& a, const auto& b) { return a.first.toInt() < b.first.toInt(); });
+        if (oldest == m_tasks.keyValueEnd() || !oldest->second->finished) {
+            break;
+        }
+        m_tasks.erase(m_tasks.constFind(oldest->first));
+    }
+}
+
+QByteArray Backend::createInstance(const QString& name, const QString& gameVersion, const QString& group)
+{
+    auto* index = m_core->metadataIndex();
+    const auto versionList = index->get(QStringLiteral("net.minecraft"));
+    if (versionList->versions().isEmpty()) {
+        // First run convenience: fetch the version list on demand.
+        runTaskSync(versionList->loadTask(Net::Mode::Online), 120000);
+    }
+    const auto version = versionList->getVersion(gameVersion);
+    if (!version) {
+        return toJson(QJsonDocument(QJsonObject{
+            { "created", false },
+            { "error", QStringLiteral("Unknown Minecraft version: %1").arg(gameVersion) },
+        }));
+    }
+
+    auto* creation = new VanillaCreationTask(version);
+    creation->setName(name);
+    creation->setIcon(QStringLiteral("default"));
+    if (!group.isEmpty()) {
+        creation->setGroup(group);
+    }
+
+    Task* staging = m_core->instances()->wrapInstanceTask(creation);
+    if (staging == nullptr) {
+        delete creation;
+        m_lastError = QStringLiteral("Could not stage the new instance");
+        return {};
+    }
+
+    const auto tracked = trackTask(Task::Ptr(staging), QStringLiteral("create-instance"));
+    QMetaObject::invokeMethod(staging, &Task::start, Qt::QueuedConnection);
+
+    // trackTask consumed the counter immediately before returning; the ABI is
+    // single threaded, so the previous value is the task id.
+    const QString taskId = QString::number(m_nextTaskId - 1);
+    return toJson(QJsonDocument(QJsonObject{
+        { "created", true },
+        { "taskId", taskId },
+        { "name", name },
+        { "gameVersion", version->version() },
+    }));
+}
+
+QByteArray Backend::taskStatus(const QString& taskId)
+{
+    const auto it = m_tasks.constFind(taskId);
+    if (it == m_tasks.constEnd() || !it.value()) {
+        m_lastError = QStringLiteral("Unknown task id: %1").arg(taskId);
+        return {};
+    }
+    const auto& tracked = it.value();
+    QString state = QStringLiteral("running");
+    if (tracked->finished) {
+        state = tracked->aborted ? QStringLiteral("aborted")
+                : tracked->succeeded ? QStringLiteral("succeeded")
+                                     : QStringLiteral("failed");
+    }
+    QJsonObject object{
+        { "id", taskId },
+        { "type", tracked->type },
+        { "state", state },
+        { "progress", double(tracked->progress) },
+        { "total", double(tracked->progressTotal) },
+        { "status", tracked->status },
+    };
+    if (tracked->finished) {
+        object.insert("succeeded", tracked->succeeded);
+    }
+    if (!tracked->error.isEmpty()) {
+        object.insert("error", tracked->error);
+    }
+    return toJson(QJsonDocument(object));
+}
+
+QByteArray Backend::waitTask(const QString& taskId, int timeoutMs)
+{
+    QElapsedTimer timer;
+    timer.start();
+    while (true) {
+        const auto it = m_tasks.constFind(taskId);
+        if (it == m_tasks.constEnd() || !it.value()) {
+            m_lastError = QStringLiteral("Unknown task id: %1").arg(taskId);
+            return {};
+        }
+        if (it.value()->finished) {
+            break;
+        }
+        const int remaining = timeoutMs - int(timer.elapsed());
+        if (remaining <= 0) {
+            break;
+        }
+        QEventLoop loop;
+        QTimer::singleShot(qMin(remaining, 1000), &loop, &QEventLoop::quit);
+        loop.exec();
+    }
+    return taskStatus(taskId);
+}
+
+bool Backend::cancelTask(const QString& taskId)
+{
+    const auto it = m_tasks.constFind(taskId);
+    if (it == m_tasks.constEnd() || !it.value() || !it.value()->task) {
+        return false;
+    }
+    return it.value()->task->abort();
+}
 }  // namespace AuraCore
 
 struct auracore_backend {
@@ -437,6 +591,42 @@ auracore_status auracore_refresh_component(auracore_backend* backend, const char
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->refreshComponent(QString::fromUtf8(uid)), out_json);
+}
+auracore_status auracore_create_instance(auracore_backend* backend,
+                                         const char* name,
+                                         const char* game_version,
+                                         const char* group,
+                                         char** out_json)
+{
+    if (backend == nullptr || name == nullptr || game_version == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const QString groupName = group == nullptr ? QString() : QString::fromUtf8(group);
+    return writeJson(backend->backend->createInstance(QString::fromUtf8(name), QString::fromUtf8(game_version), groupName), out_json);
+}
+
+auracore_status auracore_task_status(auracore_backend* backend, const char* task_id, char** out_json)
+{
+    if (backend == nullptr || task_id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->taskStatus(QString::fromUtf8(task_id)), out_json);
+}
+
+auracore_status auracore_wait_task(auracore_backend* backend, const char* task_id, int timeout_ms, char** out_json)
+{
+    if (backend == nullptr || task_id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->waitTask(QString::fromUtf8(task_id), timeout_ms), out_json);
+}
+
+auracore_status auracore_cancel_task(auracore_backend* backend, const char* task_id)
+{
+    if (backend == nullptr || task_id == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return backend->backend->cancelTask(QString::fromUtf8(task_id)) ? AURACORE_OK : AURACORE_ERROR_BACKEND;
 }
 void auracore_free(char* text)
 {

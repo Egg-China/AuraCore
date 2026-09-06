@@ -12,3 +12,5 @@ aqtinstall.log
 .vscode/
 *.user
 CMakeUserPresets.json
+# Local probe data (default --data path)
+/auracore-probe-data/

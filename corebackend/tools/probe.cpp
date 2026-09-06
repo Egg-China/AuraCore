@@ -92,6 +92,35 @@ int main(int argc, char** argv)
         auracore_free(versionJson);
     }
 
+    {
+        char* createJson = nullptr;
+        const auracore_status createStatus = auracore_create_instance(backend, "Aura Probe", "1.20.1", nullptr, &createJson);
+        std::printf("--- create-instance (status %d) ---\n", int(createStatus));
+        if (createJson != nullptr) {
+            std::puts(createJson);
+            char* taskId = strdup(createJson);
+            auracore_free(createJson);
+
+            // extract taskId with a tiny scan: {"created":true,"taskId":"N",...
+            char* idStart = std::strstr(taskId, "\"taskId\":\"");
+            if (idStart != nullptr) {
+                idStart += std::strlen("\"taskId\":\"");
+                char* idEnd = std::strchr(idStart, '"');
+                if (idEnd != nullptr) {
+                    *idEnd = '\0';
+                    char* waitJson = nullptr;
+                    const auracore_status waitStatus = auracore_wait_task(backend, idStart, 180000, &waitJson);
+                    std::printf("--- wait-task %s (status %d) ---\n", idStart, int(waitStatus));
+                    if (waitJson != nullptr) {
+                        std::puts(waitJson);
+                        auracore_free(waitJson);
+                    }
+                }
+            }
+            free(taskId);
+        }
+        printQuery("instances-after-create", backend, auracore_list_instances);
+    }
     auracore_backend_destroy(backend);
     return 0;
 }
