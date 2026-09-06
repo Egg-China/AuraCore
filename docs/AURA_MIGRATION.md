@@ -95,7 +95,7 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 
 ### 阶段 4 —— 启动流程与收尾（当前）
 - [x] 启动参数组装与进程管理（launch_instance 全链头less：组件更新→认证→NewLaunch→游戏进程；stop_instance 终止运行中的游戏；离线账号直启修复 + 进度上报双重启动崩溃修复 + 三 jar 归一 build/jars；真实 e2e：javaw 游戏进程确认存活、任务 succeeded、无孤儿进程，commit b0c455020）
-- [ ] 日志 / 崩溃收集回传双 UI
+- [x] 日志 / 崩溃收集回传双 UI（read_instance_logs 从运行中 LaunchTask 的环形 LogModel 取最新行，带 MessageLevel 级别 / running / total；e2e 实测游戏运行中读到 151 行真实输出：NewLaunch 参数、进程 ID、authlib 离线警告、纹理与声音引擎，commit 12a693db1）
 - [ ] HMCL 核心退役与数据迁移
 
 ## 原则
