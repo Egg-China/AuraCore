@@ -34,7 +34,7 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 
 ## 阶段计划
 
-### 阶段 0 —— 蒸馏导入（当前，已完成）
+### 阶段 0 —— 蒸馏导入（已完成）
 - [x] 独立仓库（非 fork）建立：剥离上游 Release/Issue/fork 网络
 - [x] 核心域 14 目录 + 根域文件导入（launcher/ 路径与上游一致）
 - [x] 排除壳层：ui / icons / resources / screenshots / translations /
@@ -42,12 +42,27 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - [x] LICENSE + COPYING.md + NOTICE + 导入清单
 - [ ] （下一步进入阶段 1）
 
-### 阶段 1 —— 可构建核心
-- [ ] 重写核心构建目标：stub BuildConfig / 解耦 Application 与 ui 引用
-- [ ] 厘清 vendored 依赖闭包（murmur2、filelink 等）并按许可证逐项导入
-- [ ] CI 基线：核心目标在 Windows/Linux/macOS 编译通过
-- [ ] 梳理 Aura-Launcher 对 HMCL 核心调用面，定义 `CoreBackend` ABI
+### 阶段 1 —— 可构建核心（当前，已完成）
+- [x] 重写核心构建目标：stub BuildConfig / 脱钩 Application 与 ui 引用
+- [x] 厘清 vendored 依赖（libnbt++、murmur2、qdcss、javacheck、NewLaunch）并按许可证逐项导入
+- [x] CI 基线：核心目标在 Windows（MinGW / Qt 6.8.3）与 Linux（Qt 6.8.3）编译通过；macOS 延后至阶段 2 拉平
+- [ ] 梳理 Aura-Launcher 与 HMCL 核心调用面，定义 `CoreBackend` ABI（随阶段 2 开工细化）
 
+#### 阶段 1 实现要点（2026-09-06）
+
+- `CoreApplication`：QObject 无头服务容器替代 QApplication 壳层；`ApplicationFwd.h` 保持 `APPLICATION` 宏兼容，
+  全库 59 处 include 改名后核心域继续直连 settings/network/metacache/instances/accounts/javalist/icons。
+- 启动链路收口：`launch(MinecraftInstance*, LaunchMode, MinecraftTarget::Ptr, MinecraftAccountPtr, QString)`
+  与 `kill(BaseInstance*)` 由 CoreApplication 提供；LaunchController 生命周期由 `m_controllers` 托管，
+  finished 后自动移除。
+- OAuth 兼容：保留 `oauthReplyRecieved(QVariantMap)` 信号供宿主进程转发 MSA 回调。
+- 无头化（qWarning + 合理默认）：CustomMessageBox / BlockedMods / OptionalMod / UntrustedMods /
+  ProgressDialog / MSALogin / ProfileSelect / ProfileSetup / ChooseOfflineName / NetworkJobFailedDialog；
+  可选 mod 全选、blocked mod 跳过未匹配继续、不自动进 demo、复用旧离线名、NetJob 自动重试、
+  授权失败即 abort。
+- BuildConfig：git commit/tag/refspec 与时间戳在 `add_library` 前求值注入 `AURACORE_*` 宏。
+- vendored：libnbt++（NBT_BUILD_TESTS 默认关闭于 CI）、murmur2、qdcss、javacheck/NewLaunch（`--release 8`），
+  tomlplusplus v3.4.0 走 FetchContent，zlib/libarchive 为外部静态依赖。
 ### 阶段 2 —— 只读能力
 - [ ] 实例发现与元数据读取
 - [ ] 版本清单 / 模组清单查询

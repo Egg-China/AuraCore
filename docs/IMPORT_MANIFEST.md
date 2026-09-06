@@ -35,9 +35,19 @@
 | launcher/macsandbox/ | macOS App 壳层安全书签（Application 绑定） |
 | launcher/Application.* | 桌面应用入口壳层 |
 | launcher/FastFileIconProvider.* FileIgnoreProxy.* | Qt 文件对话框模型 |
-| launcher/CMakeLists.txt | 深度耦合 ui/Application；阶段 1 重写核心构建目标 |
+| launcher/CMakeLists.txt | 深度耦合 ui/Application；已重写为 `auracore_core` 静态库构建目标（阶段 1） |
 
 ## 上游跟进策略
 
 保持 `launcher/` 内部相对路径与上游一致；后续从上游 develop cherry-pick 核心域
 修复即可按路径干净套用。壳层目录永不回流。
+
+## 阶段 1 构建记录（2026-09-06）
+
+- 新增根 `CMakeLists.txt`：AuraCore 0.1.0 / C++23 / Qt 6.5+（Concurrent、Core、Gui、Network、NetworkAuth、Widgets、Xml），
+  tomlplusplus v3.4.0 FetchContent，zlib/libarchive 外部静态依赖。
+- `buildconfig/`：静态 BuildConfig 库；git commit/tag/refspec 与构建时间戳由 CMake 在 `add_library` 前注入 `AURACORE_*` 宏。
+- `launcher/CMakeLists.txt`：构建 `auracore_core` 静态库，`launcher/ui/` 零引用，`LAUNCHER_APPLICATION` 宏保持网络层守卫可用。
+- vendored 目标：javacheck、NewLaunch/NewLaunchLegacy（`--release 8`，产物安装到 `jars/`）、libnbt++、murmur2、qdcss。
+- CI：`.github/workflows/build.yml` 覆盖 windows-x64-mingw（Qt 6.8.3 + tools_mingw1310，zlib/libarchive 源码静态构建）
+  与 linux-x64（Qt 6.8.3 + apt libarchive/zlib），只构建核心目标与 jar，不发 Release。

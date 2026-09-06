@@ -4,8 +4,8 @@ Aura Launcher 的下一代启动器核心：从 [PrismLauncher](https://github.c
 蒸馏出的核心域能力（实例管理、版本元数据、下载、认证、启动流程、模组平台 API），
 不含 Prism 的 Qt 桌面壳层、品牌资源与自更新器。
 
-> 状态：**阶段 0 —— 核心源导入 + 版权声明**。源码树已按核心域裁剪导入，
-> 尚未接通构建（上游 CMake 深度耦合 Application/ui，阶段 1 重写核心构建目标）。
+> 状态：**阶段 1 —— 可构建核心**。`auracore_core` 静态库 + `BuildConfig` + NewLaunch/JavaCheck jar
+> 已在 Windows/MinGW（Qt 6.8.3）本地构建通过，CI 基线覆盖 Windows 与 Linux。
 
 ## 这是什么 / 不是什么
 
@@ -13,7 +13,7 @@ Aura Launcher 的下一代启动器核心：从 [PrismLauncher](https://github.c
 |---|---|
 | 是 | 独立仓库、GPL-3.0 派生作品、只保留核心域的 Prism 源码蒸馏 |
 | 不是 | PrismLauncher 的 GitHub fork；不继承其 Release / Issue / fork 网络 |
-| 不是 | 可直接编译的库（阶段 1 交付 BuildConfig/ui 解耦与核心构建目标） |
+| 不是 | 可独立运行的启动器（不含 Qt 桌面壳层与可执行入口，供 Aura-Launcher 适配层链接） |
 
 ## 版权
 
