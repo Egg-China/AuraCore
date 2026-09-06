@@ -45,6 +45,7 @@
 #include "meta/Index.h"
 #include "meta/Version.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
+#include "minecraft/auth/AccountList.h"
 #include "InstanceDirUpdate.h"
 #include "InstanceImportTask.h"
 #include "MMCZip.h"
@@ -613,6 +614,80 @@ QByteArray Backend::importInstance(const QString& source, const QString& name, c
         { "source", url.toString() },
     }));
 }
+QByteArray Backend::listAccounts()
+{
+    QJsonArray array;
+    const auto* accounts = m_core->accounts();
+    for (int i = 0; i < accounts->count(); ++i) {
+        const auto& account = accounts->at(i);
+        QJsonObject object;
+        object.insert("profileName", account->profileName());
+        object.insert("type", account->typeString());
+        object.insert("internalId", account->internalId());
+        object.insert("hasProfile", account->hasProfile());
+        array.append(object);
+    }
+    return toJson(QJsonDocument(array));
+}
+
+QByteArray Backend::addOfflineAccount(const QString& username)
+{
+    if (username.isEmpty()) {
+        m_lastError = QStringLiteral("Offline account username must not be empty");
+        return {};
+    }
+    auto* accounts = m_core->accounts();
+    for (int i = 0; i < accounts->count(); ++i) {
+        if (accounts->at(i)->profileName().compare(username, Qt::CaseInsensitive) == 0) {
+            return toJson(QJsonDocument(QJsonObject{
+                { "added", false },
+                { "profileName", username },
+                { "error", QStringLiteral("An account with this profile name already exists") },
+            }));
+        }
+    }
+
+    const auto account = MinecraftAccount::createOffline(username);
+    accounts->addAccount(account);
+    return toJson(QJsonDocument(QJsonObject{
+        { "added", true },
+        { "profileName", account->profileName() },
+        { "internalId", account->internalId() },
+        { "type", account->typeString() },
+    }));
+}
+
+QByteArray Backend::removeAccount(const QString& profileName)
+{
+    auto* accounts = m_core->accounts();
+    for (int i = 0; i < accounts->count(); ++i) {
+        if (accounts->at(i)->profileName() == profileName) {
+            accounts->removeAccount(accounts->index(i, 0));
+            return toJson(QJsonDocument(QJsonObject{
+                { "removed", true },
+                { "profileName", profileName },
+            }));
+        }
+    }
+    m_lastError = QStringLiteral("Unknown account profile name: %1").arg(profileName);
+    return {};
+}
+
+QByteArray Backend::setDefaultAccount(const QString& profileName)
+{
+    auto* accounts = m_core->accounts();
+    for (int i = 0; i < accounts->count(); ++i) {
+        if (accounts->at(i)->profileName() == profileName) {
+            accounts->setDefaultAccount(accounts->at(i));
+            return toJson(QJsonDocument(QJsonObject{
+                { "ok", true },
+                { "profileName", profileName },
+            }));
+        }
+    }
+    m_lastError = QStringLiteral("Unknown account profile name: %1").arg(profileName);
+    return {};
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -881,6 +956,37 @@ auracore_status auracore_import_instance(auracore_backend* backend, const char* 
     }
     const QString groupName = group == nullptr ? QString() : QString::fromUtf8(group);
     return writeJson(backend->backend->importInstance(QString::fromUtf8(source), QString::fromUtf8(name), groupName), out_json);
+}
+auracore_status auracore_list_accounts(auracore_backend* backend, char** out_json)
+{
+    if (backend == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->listAccounts(), out_json);
+}
+
+auracore_status auracore_add_offline_account(auracore_backend* backend, const char* username, char** out_json)
+{
+    if (backend == nullptr || username == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->addOfflineAccount(QString::fromUtf8(username)), out_json);
+}
+
+auracore_status auracore_remove_account(auracore_backend* backend, const char* profile_name, char** out_json)
+{
+    if (backend == nullptr || profile_name == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->removeAccount(QString::fromUtf8(profile_name)), out_json);
+}
+
+auracore_status auracore_set_default_account(auracore_backend* backend, const char* profile_name, char** out_json)
+{
+    if (backend == nullptr || profile_name == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->setDefaultAccount(QString::fromUtf8(profile_name)), out_json);
 }
 void auracore_free(char* text)
 {

@@ -54,6 +54,10 @@ class Backend {
     QByteArray deleteInstance(const QString& id);
     QByteArray exportInstance(const QString& id, const QString& outputPath);
     QByteArray importInstance(const QString& source, const QString& name, const QString& group);
+    QByteArray listAccounts();
+    QByteArray addOfflineAccount(const QString& username);
+    QByteArray removeAccount(const QString& profileName);
+    QByteArray setDefaultAccount(const QString& profileName);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);

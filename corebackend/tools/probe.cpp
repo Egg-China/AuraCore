@@ -237,6 +237,37 @@ int main(int argc, char** argv)
         }
         printQuery("instances-final", backend, auracore_list_instances);
     }
+    {
+        printQuery("accounts-initial", backend, auracore_list_accounts);
+
+        char* addJson = nullptr;
+        const auracore_status addStatus = auracore_add_offline_account(backend, "AuraTester", &addJson);
+        std::printf("--- add-offline-account (status %d) ---\n", int(addStatus));
+        if (addJson != nullptr) {
+            std::puts(addJson);
+            auracore_free(addJson);
+        }
+
+        printQuery("accounts-after-add", backend, auracore_list_accounts);
+
+        char* defaultJson = nullptr;
+        const auracore_status defaultStatus = auracore_set_default_account(backend, "AuraTester", &defaultJson);
+        std::printf("--- set-default-account (status %d) ---\n", int(defaultStatus));
+        if (defaultJson != nullptr) {
+            std::puts(defaultJson);
+            auracore_free(defaultJson);
+        }
+
+        char* removeJson = nullptr;
+        const auracore_status removeStatus = auracore_remove_account(backend, "AuraTester", &removeJson);
+        std::printf("--- remove-account (status %d) ---\n", int(removeStatus));
+        if (removeJson != nullptr) {
+            std::puts(removeJson);
+            auracore_free(removeJson);
+        }
+
+        printQuery("accounts-after-remove", backend, auracore_list_accounts);
+    }
     auracore_backend_destroy(backend);
     return 0;
 }

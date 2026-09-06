@@ -135,6 +135,17 @@ AURACORE_BACKEND_API auracore_status auracore_export_instance(auracore_backend* 
  * Modrinth, CurseForge and Technic archives are auto-detected. group may be
  * NULL. Returns { importing, taskId, name, source }. */
 AURACORE_BACKEND_API auracore_status auracore_import_instance(auracore_backend* backend, const char* source, const char* name, const char* group, char** out_json);
+/* Lists stored accounts as [{ profileName, type, internalId, hasProfile }]. */
+AURACORE_BACKEND_API auracore_status auracore_list_accounts(auracore_backend* backend, char** out_json);
+
+/* Creates and stores an offline profile; rejects duplicate profile names. */
+AURACORE_BACKEND_API auracore_status auracore_add_offline_account(auracore_backend* backend, const char* username, char** out_json);
+
+/* Removes an account by its profile name. */
+AURACORE_BACKEND_API auracore_status auracore_remove_account(auracore_backend* backend, const char* profile_name, char** out_json);
+
+/* Selects the account future launches use by default. */
+AURACORE_BACKEND_API auracore_status auracore_set_default_account(auracore_backend* backend, const char* profile_name, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 
