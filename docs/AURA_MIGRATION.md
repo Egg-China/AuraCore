@@ -94,6 +94,7 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - [x] 下载与镜像源策略（get_setting / set_setting 通用设置面：MetaURLOverride 可切 BMCLAPI 等镜像源，数值/布尔/字符串/字符串列表 JSON 往返，INI 立即持久化；e2e 实测镜像源写入读回 + 重置，commit 77c089aae）
 
 ### 阶段 4 —— 启动流程与收尾（当前，仅剩跨仓迁移）
+- [x] 非 Qt 宿主支持（backend_create 无 QCoreApplication 时自建并持有最小 app，argv 存储活过对象；JVM/JNA 实测 create→list→destroy 全通，run 双平台绿，commit 565fa8d38）——HMCL 退役的跨仓前置已就绪，Aura-Launcher `feature/auracore-native-engine` 分支已接上（JNA 绑定 / coreEngine 切换 / 实例创建启动分流 / 允许清单迁移 / 全生命周期 JVM 集成测试）
 - [x] 启动参数组装与进程管理（launch_instance 全链头less：组件更新→认证→NewLaunch→游戏进程；stop_instance 终止运行中的游戏；离线账号直启修复 + 进度上报双重启动崩溃修复 + 三 jar 归一 build/jars；真实 e2e：javaw 游戏进程确认存活、任务 succeeded、无孤儿进程，commit b0c455020）
 - [x] 日志 / 崩溃收集回传双 UI（read_instance_logs 从运行中 LaunchTask 的环形 LogModel 取最新行，带 MessageLevel 级别 / running / total；e2e 实测游戏运行中读到 151 行真实输出：NewLaunch 参数、进程 ID、authlib 离线警告、纹理与声音引擎，commit 12a693db1）
 - [ ] HMCL 核心退役与数据迁移
