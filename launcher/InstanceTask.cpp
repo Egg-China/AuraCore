@@ -2,30 +2,21 @@
 #include <QApplication>
 #include <QDir>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/MinecraftLoadAndCheck.h"
 #include "settings/SettingsObject.h"
 #include "tasks/SequentialTask.h"
-#include "ui/dialogs/CustomMessageBox.h"
+#include <QDebug>
 
 #include <QPushButton>
 
 InstanceNameChange askForChangingInstanceName(QWidget* parent, const QString& oldName, const QString& newName)
 {
-    auto* dialog =
-        CustomMessageBox::selectable(parent, QObject::tr("Change instance name"),
-                                     QObject::tr("The instance's name seems to include the old version. Would you like to update it?\n\n"
-                                                 "Old name: %1\n"
-                                                 "New name: %2")
-                                         .arg(oldName, newName),
-                                     QMessageBox::Question, QMessageBox::No | QMessageBox::Yes);
-    auto result = dialog->exec();
-
-    if (result == QMessageBox::Yes) {
-        return InstanceNameChange::ShouldChange;
-    }
-    return InstanceNameChange::ShouldKeep;
+    Q_UNUSED(parent)
+    // AuraCore is headless: accept the name change derived from pack metadata.
+    qWarning() << "Auto-accepting instance name change" << oldName << "->" << newName;
+    return InstanceNameChange::ShouldChange;
 }
 
 ShouldUpdate askIfShouldUpdate(QWidget* parent, const QString& originalVersionName)
@@ -34,26 +25,9 @@ ShouldUpdate askIfShouldUpdate(QWidget* parent, const QString& originalVersionNa
         return ShouldUpdate::SkipUpdating;
     }
 
-    auto* info = CustomMessageBox::selectable(
-        parent, QObject::tr("Similar modpack was found!"),
-        QObject::tr(
-            "One or more of your instances are from this same modpack%1. Do you want to create a "
-            "separate instance, or update the existing one?\n\nNOTE: Make sure you made a backup of your important instance data before "
-            "updating, as worlds can be corrupted and some configuration may be lost (due to pack overrides).")
-            .arg(originalVersionName),
-        QMessageBox::Information, QMessageBox::Cancel);
-    QAbstractButton* update = info->addButton(QObject::tr("Update existing instance"), QMessageBox::AcceptRole);
-    QAbstractButton* skip = info->addButton(QObject::tr("Create new instance"), QMessageBox::ResetRole);
-
-    info->exec();
-
-    if (info->clickedButton() == update) {
-        return ShouldUpdate::Update;
-    }
-    if (info->clickedButton() == skip) {
+    Q_UNUSED(parent)
+    qWarning() << "Similar modpack found for" << originalVersionName << "- creating a separate instance (headless default)";
         return ShouldUpdate::SkipUpdating;
-    }
-    return ShouldUpdate::Cancel;
 }
 
 QString InstanceTask::name() const
@@ -101,12 +75,9 @@ void InstanceTask::setOverride(bool override, const QString& instanceIdToOverrid
 
 ShouldDeleteSaves askIfShouldDeleteSaves(QWidget* parent)
 {
-    auto* dialog = CustomMessageBox::selectable(parent, QObject::tr("Delete Existing Save Files"),
-                                                QObject::tr("An earlier version of this mod pack installed save files.\n"
-                                                            "Would you like to remove those existing saves as part of this update?"),
-                                                QMessageBox::Question, QMessageBox::No | QMessageBox::Yes);
-    auto result = dialog->exec();
-    return result == QMessageBox::Yes ? ShouldDeleteSaves::Yes : ShouldDeleteSaves::No;
+    Q_UNUSED(parent)
+    qWarning() << "Keeping existing saves: interactive deletion confirmation is unavailable in AuraCore";
+    return ShouldDeleteSaves::No;
 }
 
 void InstanceTask::scheduleToDelete(QWidget* parent, const QDir& dir, const QString& path, bool checkDisabled)
@@ -158,9 +129,7 @@ void InstanceTask::downloadFiles(MinecraftInstance* inst)
             return;
         }
         if (!task->wasSuccessful()) {
-            CustomMessageBox::selectable(QApplication::activeWindow(), tr("Error"),
-                                         tr("Could not download game files: %1").arg(task->failReason()), QMessageBox::Warning)
-                ->show();
+            qWarning() << "Could not download game files:" << task->failReason();
         }
         emitSucceeded();
     });

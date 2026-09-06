@@ -28,10 +28,11 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "minecraft/PackProfile.h"
 #include "minecraft/mod/ModFolderModel.h"
+#include <QCoreApplication>
 #include "modplatform/ModIndex.h"
 #include "modplatform/flame/FlameModIndex.h"
 #include "modplatform/helpers/HashUtils.h"

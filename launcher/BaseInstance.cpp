@@ -44,7 +44,7 @@
 #include <QJsonObject>
 #include <QUuid>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "launch/LaunchTask.h"
 #include "settings/Setting.h"

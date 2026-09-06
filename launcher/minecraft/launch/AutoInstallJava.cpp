@@ -38,7 +38,7 @@
 #include <QFileInfo>
 #include <memory>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "MessageLevel.h"
 #include "QObjectPtr.h"

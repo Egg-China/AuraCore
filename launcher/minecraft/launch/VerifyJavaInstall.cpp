@@ -36,7 +36,7 @@
 #include "VerifyJavaInstall.h"
 #include <memory>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "MessageLevel.h"
 #include "java/JavaInstall.h"
 #include "java/JavaInstallList.h"

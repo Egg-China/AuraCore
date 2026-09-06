@@ -1,3 +1,4 @@
+#include "modplatform/BlockedMod.h"
 // SPDX-License-Identifier: GPL-3.0-only
 /*
  *  Prism Launcher - Minecraft Launcher
@@ -43,7 +44,7 @@
 #include "QObjectPtr.h"
 #include "modplatform/flame/FileResolvingTask.h"
 #include "net/NetJob.h"
-#include "ui/dialogs/BlockedModsDialog.h"
+
 
 #include <QWidget>
 #include <memory>

@@ -15,7 +15,7 @@
 
 #include "Index.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "JsonFormat.h"
 #include "QObjectPtr.h"
 #include "VersionList.h"

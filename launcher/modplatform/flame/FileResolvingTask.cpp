@@ -31,7 +31,7 @@
 #include "settings/SettingsObject.h"
 #include "tasks/Task.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 Flame::FileResolvingTask::FileResolvingTask(Flame::Manifest& toProcess) : m_manifest(toProcess) {}
 

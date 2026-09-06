@@ -46,7 +46,7 @@
 #include "minecraft/PackProfile.h"
 #include "settings/INISettingsObject.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 
 #include "net/ApiRequest.h"

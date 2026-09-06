@@ -17,7 +17,7 @@
  */
 #include "java/download/ManifestDownloadTask.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "Json.h"
 #include "net/ChecksumValidator.h"

@@ -36,7 +36,7 @@
 
 #include "InstanceImportTask.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "NullInstance.h"
 

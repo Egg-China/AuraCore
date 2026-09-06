@@ -53,7 +53,7 @@
 #include <variant>
 
 #if defined(LAUNCHER_APPLICATION)
-#include "Application.h"
+#include "CoreApplication.h"
 #include "net/ApiHeaderProxy.h"
 #include "net/ChecksumValidator.h"
 #include "net/MetaCacheSink.h"

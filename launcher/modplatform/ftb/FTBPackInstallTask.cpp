@@ -49,9 +49,9 @@
 #include "net/ChecksumValidator.h"
 #include "settings/INISettingsObject.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
-#include "ui/dialogs/BlockedModsDialog.h"
+#include <QDebug>
 
 namespace FTB {
 
@@ -215,19 +215,8 @@ void PackInstallTask::onResolveModsSucceeded()
     if (anyBlocked) {
         qDebug() << "Blocked files found, displaying file list";
 
-        BlockedModsDialog messageDialog(m_parent, tr("Blocked files found"),
-                                        tr("The following files are not available for download in third party launchers.<br/>"
-                                           "You will need to manually download them and add them to the instance."),
-                                        m_blockedMods);
-
-        messageDialog.setModal(true);
-
-        if (messageDialog.exec() == QDialog::Accepted) {
-            qDebug() << "Post dialog blocked mods list: " << m_blockedMods;
-            createInstance();
-        } else {
-            abort();
-        }
+        qWarning() << "Blocked files found; unmatched files are skipped in headless mode" << m_blockedMods;
+        createInstance();
 
     } else {
         createInstance();

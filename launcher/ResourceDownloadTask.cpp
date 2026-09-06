@@ -21,7 +21,7 @@
 
 #include <utility>
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 #include "FileSystem.h"
 #include "minecraft/MinecraftInstance.h"

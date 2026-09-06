@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "net/NetJob.h"
 

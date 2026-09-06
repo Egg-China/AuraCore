@@ -24,9 +24,13 @@
 #endif
 #include <windows.h>
 
+#if __has_include(<consoleapi.h>)
 #include <consoleapi.h>
+#endif
 #include <fcntl.h>
+#if __has_include(<fileapi.h>)
 #include <fileapi.h>
+#endif
 #include <io.h>
 #include <stdio.h>
 #include <cstddef>

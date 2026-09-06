@@ -3,7 +3,7 @@
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 LibrariesTask::LibrariesTask(MinecraftInstance* inst)
 {

@@ -5,7 +5,7 @@
 #include "ModrinthAPI.h"
 #include <array>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "modplatform/ResourceType.h"
 #include "net/ApiRequest.h"

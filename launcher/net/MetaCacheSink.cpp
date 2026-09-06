@@ -37,7 +37,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
-#include "Application.h"
+#include "CoreApplication.h"
 
 #include "net/Logging.h"
 

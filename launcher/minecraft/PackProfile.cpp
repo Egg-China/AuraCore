@@ -50,7 +50,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Exception.h"
 #include "FileSystem.h"
 #include "Json.h"
@@ -68,7 +68,7 @@
 
 #include "minecraft/Logging.h"
 
-#include "ui/dialogs/CustomMessageBox.h"
+
 
 PackProfile::PackProfile(MinecraftInstance* instance) : QAbstractListModel()
 {

@@ -1,6 +1,6 @@
 #include "ModrinthInstanceCreationTask.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "InstanceList.h"
 #include "Json.h"
@@ -21,11 +21,11 @@
 #include "modplatform/ModIndex.h"
 #include "settings/INISettingsObject.h"
 
-#include "ui/dialogs/CustomMessageBox.h"
-#include "ui/dialogs/UntrustedModsDialog.h"
-#include "ui/pages/modplatform/OptionalModDialog.h"
 
-#include <QAbstractButton>
+
+
+
+#include <QDebug>
 #include <QFileInfo>
 #include <QHash>
 #include <vector>
@@ -144,15 +144,7 @@ void ModrinthCreationTask::executeTask()
         }
     } else {
         // We don't have an old index file, so we may duplicate stuff!
-        auto* dialog = CustomMessageBox::selectable(m_parent, tr("No index file."),
-                                                    tr("We couldn't find a suitable index file for the older version. This may cause some "
-                                                       "of the files to be duplicated. Do you want to continue?"),
-                                                    QMessageBox::Warning, QMessageBox::Ok | QMessageBox::Cancel);
-
-        if (dialog->exec() == QDialog::DialogCode::Rejected) {
-            emitAborted();
-            return;
-        }
+        qWarning() << "No old index file found; files may be duplicated when updating (headless core)";
     }
 
     setOverride(true, inst->id());
@@ -388,13 +380,8 @@ bool ModrinthCreationTask::parseManifest(const QString& indexPath, std::vector<F
                     for (const auto& file : optionalFiles) {
                         oFiles.push_back(file.path);
                     }
-                    OptionalModDialog optionalModDialog(m_parent, oFiles);
-                    if (optionalModDialog.exec() == QDialog::Rejected) {
-                        emitAborted();
-                        return false;
-                    }
-
-                    auto selectedMods = optionalModDialog.getResult();
+                    // Headless default: enable every optional file shipped by the pack.
+                    const QStringList selectedMods = oFiles;
                     for (auto file : optionalFiles) {
                         if (selectedMods.contains(file.path)) {
                             file.required = true;
@@ -488,8 +475,8 @@ bool ModrinthCreationTask::promptForUntrustedMods()
         return true;
     }
 
-    UntrustedModsDialog dialog{ untrustedMods, m_parent };
-    return dialog.exec() == QDialog::Accepted;
+    qWarning() << "Ignoring untrusted mod metadata while installing Modrinth pack (headless core)";
+    return true;
 }
 
 ModrinthCreationTask::ModrinthCreationTask(const QString& stagingPath,

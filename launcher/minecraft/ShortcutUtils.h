@@ -36,7 +36,7 @@
  */
 
 #pragma once
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BaseInstance.h"
 
 #include <QList>

@@ -18,7 +18,7 @@
 #include <QDateTime>
 #include <algorithm>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Index.h"
 #include "JsonFormat.h"
 #include "Version.h"

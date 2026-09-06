@@ -37,7 +37,7 @@
 #include "PrivatePackManager.h"
 
 #include <QDomDocument>
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 
 #include "net/ApiRequest.h"

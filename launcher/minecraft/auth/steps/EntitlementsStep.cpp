@@ -6,8 +6,8 @@
 #include <QUuid>
 #include <memory>
 
-#include "Application.h"
-#include "Logging.h"
+#include "CoreApplication.h"
+#include "minecraft/auth/Logging.h"
 #include "minecraft/auth/Parsers.h"
 #include "net/Request.h"
 #include "net/NetJob.h"

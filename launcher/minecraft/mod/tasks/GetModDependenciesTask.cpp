@@ -24,14 +24,16 @@
 #include <utility>
 #include "Json.h"
 #include "QObjectPtr.h"
+#include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 #include "minecraft/mod/MetadataHandler.h"
 #include "minecraft/mod/ModFolderModel.h"
 #include "minecraft/mod/ResourceFolderModel.h"
 #include "modplatform/ModIndex.h"
+#include "net/NetJob.h"
 #include "modplatform/ResourceAPI.h"
 #include "tasks/SequentialTask.h"
-#include "ui/pages/modplatform/ModModel.h"
+
 
 namespace {
 

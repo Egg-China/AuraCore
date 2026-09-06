@@ -21,7 +21,7 @@
 #include "MMCZip.h"
 #include "TechnicPackProcessor.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 #include "net/ApiRequest.h"
 

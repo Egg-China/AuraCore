@@ -51,14 +51,15 @@
 #include "minecraft/OneSixVersionFormat.h"
 #include "minecraft/PackProfile.h"
 #include "modplatform/atlauncher/ATLPackManifest.h"
+#include "modplatform/BlockedMod.h"
 #include "net/ChecksumValidator.h"
 #include "settings/INISettingsObject.h"
 
 #include "net/ApiRequest.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
-#include "ui/dialogs/BlockedModsDialog.h"
+#include <QDebug>
 
 namespace {
 bool isPathTraversal(const QString& basePath, const QString& entryName)
@@ -837,16 +838,8 @@ void PackInstallTask::downloadMods()
             mods.append(blockedMod);
         }
 
-        qWarning() << "Blocked mods found, displaying mod list";
-
-        BlockedModsDialog messageDialog(nullptr, tr("Blocked mods found"),
-                                        tr("The following files are not available for download in third party launchers.<br/>"
-                                           "You will need to manually download them and add them to the instance."),
-                                        mods, "md5");
-
-        messageDialog.setModal(true);
-
-        if (messageDialog.exec() != 0) {
+        qWarning() << "Blocked mods found; no local matches are copied in headless mode";
+        {
             qDebug() << "Post dialog blocked mods list:" << mods;
             for (const auto& blocked : mods) {
                 if (!blocked.matched) {
@@ -890,9 +883,6 @@ void PackInstallTask::downloadMods()
                     modsToCopy[blocked.localPath] = path;
                 }
             }
-        } else {
-            emitFailed(tr("Unknown download type: %1").arg("browser"));
-            return;
         }
     }
 

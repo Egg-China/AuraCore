@@ -1,7 +1,7 @@
 #include "ClaimAccount.h"
 #include <launch/LaunchTask.h>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "minecraft/auth/AccountList.h"
 
 ClaimAccount::ClaimAccount(LaunchTask* parent, AuthSessionPtr session) : LaunchStep(parent)

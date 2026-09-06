@@ -38,7 +38,7 @@
 #include <QDateTime>
 #include <QUrlQuery>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "net/RawHeaderProxy.h"
 

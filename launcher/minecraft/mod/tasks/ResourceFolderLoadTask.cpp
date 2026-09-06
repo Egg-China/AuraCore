@@ -36,7 +36,7 @@
 
 #include "ResourceFolderLoadTask.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "minecraft/mod/MetadataHandler.h"
 

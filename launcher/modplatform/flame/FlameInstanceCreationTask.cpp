@@ -42,7 +42,7 @@
 #include "modplatform/flame/FlameModIndex.h"
 #include "modplatform/flame/PackManifest.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "InstanceList.h"
 #include "Json.h"
@@ -55,8 +55,8 @@
 #include "settings/INISettingsObject.h"
 
 #include "tasks/ConcurrentTask.h"
-#include "ui/dialogs/BlockedModsDialog.h"
-#include "ui/dialogs/CustomMessageBox.h"
+
+
 
 #include <QDebug>
 #include <QFileInfo>
@@ -67,8 +67,8 @@
 #include "minecraft/World.h"
 #include "minecraft/mod/tasks/LocalResourceParse.h"
 #include "net/ApiRequest.h"
-#include "ui/dialogs/UntrustedModsDialog.h"
-#include "ui/pages/modplatform/OptionalModDialog.h"
+
+
 
 bool FlameCreationTask::abort()
 {
@@ -154,13 +154,7 @@ void FlameCreationTask::executeTask()
 
     auto warnUser = [this, createInst](const QString& title,
                                        const QString& text) {  // We don't have an old index file, so we may duplicate stuff!
-        auto* dialog = CustomMessageBox::selectable(m_parent, title, text, QMessageBox::Warning, QMessageBox::Ok | QMessageBox::Cancel);
-
-        if (dialog->exec() == QDialog::DialogCode::Rejected) {
-            emitAborted();
-            return;
-        }
-
+        qWarning() << title << ":" << text;
         createInst();
     };
 
@@ -365,8 +359,8 @@ bool FlameCreationTask::promptForUntrustedMods()
         return true;
     }
 
-    UntrustedModsDialog dialog{ untrustedMods, m_parent };
-    return dialog.exec() == QDialog::Accepted;
+    qWarning() << "Ignoring untrusted mod metadata while installing Flame pack (headless core)";
+    return true;
 }
 
 void FlameCreationTask::createInstance()
@@ -542,14 +536,9 @@ void FlameCreationTask::idResolverSucceeded()
         }
     }
 
-    if (!optionalFiles.empty()) {
-        OptionalModDialog optionalModDialog(m_parent, optionalFiles);
-        if (optionalModDialog.exec() == QDialog::Rejected) {
-            emitAborted();
-            return;
-        }
-
-        m_selectedOptionalMods = optionalModDialog.getResult();
+    if (!optionalFiles.isEmpty()) {
+        // Headless default: install every optional file shipped by the pack.
+        m_selectedOptionalMods = optionalFiles;
     }
 
     // first check for blocked mods
@@ -580,24 +569,9 @@ void FlameCreationTask::idResolverSucceeded()
         }
     }
     if (anyBlocked) {
-        qWarning() << "Blocked mods found, displaying mod list";
-
-        BlockedModsDialog messageDialog(m_parent, tr("Blocked mods found"),
-                                        tr("The following files are not available for download in third party launchers.<br/>"
-                                           "You will need to manually download them and add them to the instance."),
-                                        blockedMods);
-
-        messageDialog.setModal(true);
-
-        if (messageDialog.exec() != 0) {
-            qDebug() << "Post dialog blocked mods list:" << blockedMods;
-            copyBlockedMods(blockedMods);
-            setupDownloadJob();
-        } else {
-            m_modIdResolver.reset();
-            emitAborted();
-            return;
-        }
+        qWarning() << "Blocked mods found; unmatched files are skipped in headless mode" << blockedMods;
+        copyBlockedMods(blockedMods);
+        setupDownloadJob();
     } else {
         setupDownloadJob();
     }

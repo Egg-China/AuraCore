@@ -18,7 +18,7 @@
 #include "java/download/ArchiveDownloadTask.h"
 #include <memory>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "archive/ArchiveReader.h"
 #include "archive/ExtractZipTask.h"
 #include "net/ChecksumValidator.h"

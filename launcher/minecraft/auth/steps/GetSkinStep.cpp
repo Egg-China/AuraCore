@@ -3,7 +3,7 @@
 
 #include <QNetworkRequest>
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 GetSkinStep::GetSkinStep(AccountData* data) : AuthStep(data) {}
 

@@ -15,7 +15,7 @@
 
 #include "AuthFlow.h"
 
-#include <Application.h>
+#include "CoreApplication.h"
 
 AuthFlow::AuthFlow(AccountData* data, Action action) : Task(), m_data(data)
 {

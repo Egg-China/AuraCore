@@ -6,7 +6,7 @@
 #include <optional>
 #include "BuildConfig.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 #include "modplatform/ModIndex.h"
 #include "net/ApiRequest.h"

@@ -39,7 +39,7 @@
 
 #include <QSaveFile>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 #include "OneSixVersionFormat.h"
 #include "VersionFile.h"

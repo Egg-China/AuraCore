@@ -4,8 +4,8 @@
 #include <QJsonParseError>
 #include <utility>
 
-#include "Application.h"
-#include "Logging.h"
+#include "CoreApplication.h"
+#include "minecraft/auth/Logging.h"
 #include "minecraft/auth/Parsers.h"
 #include "net/NetUtils.h"
 #include "net/RawHeaderProxy.h"

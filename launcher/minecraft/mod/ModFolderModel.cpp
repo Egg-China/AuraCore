@@ -57,7 +57,7 @@
 #include "minecraft/mod/ResourceFolderModel.h"
 #include "minecraft/mod/tasks/LocalModParseTask.h"
 #include "modplatform/ModIndex.h"
-#include "ui/dialogs/CustomMessageBox.h"
+#include <QDebug>
 
 ModFolderModel::ModFolderModel(const QDir& dir, MinecraftInstance* instance, bool isIndexed, bool createDir, QObject* parent)
     : ResourceFolderModel(QDir(dir), instance, isIndexed, createDir, parent)
@@ -483,20 +483,10 @@ bool ModFolderModel::setResourceEnabled(const QModelIndexList& indexes, EnableAc
         }
         message += tr("Do you want to automatically apply these related changes?\nIgnoring them may break the game.");
 
-        auto* box = CustomMessageBox::selectable(nullptr, title, message, QMessageBox::Warning,
-                                                 QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::No);
-        box->button(QMessageBox::No)->setText(noButton);
-        box->button(QMessageBox::Yes)->setText(yesButton);
-        box->setDetailedText(details);
-
-        auto response = box->exec();
-
-        if (response == QMessageBox::Yes) {
-            toEnable |= requiredToEnable;
-            toDisable |= requiredToDisable;
-        } else if (response == QMessageBox::Cancel) {
-            return false;
-        }
+        qWarning().noquote() << title << message << details;
+        // Headless default: apply the dependency-preserving toggle set.
+        toEnable |= requiredToEnable;
+        toDisable |= requiredToDisable;
     }
 
     auto disableStatus = ResourceFolderModel::setResourceEnabled(toList(toDisable), EnableAction::DISABLE);

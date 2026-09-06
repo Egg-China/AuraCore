@@ -49,7 +49,7 @@
 #include <QUuid>
 #include <algorithm>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BaseInstance.h"
 #include "ExponentialSeries.h"
 #include "FileSystem.h"

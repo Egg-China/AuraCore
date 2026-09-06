@@ -1,3 +1,4 @@
+#include "modplatform/BlockedMod.h"
 // SPDX-License-Identifier: GPL-3.0-only
 /*
  *  Prism Launcher - Minecraft Launcher
@@ -45,7 +46,7 @@
 
 #include "net/NetJob.h"
 
-#include "ui/dialogs/BlockedModsDialog.h"
+
 
 class FlameCreationTask final : public InstanceTask {
     Q_OBJECT

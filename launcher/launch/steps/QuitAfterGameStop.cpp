@@ -18,7 +18,7 @@
 
 #include "QuitAfterGameStop.h"
 #include <launch/LaunchTask.h>
-#include "Application.h"
+#include "CoreApplication.h"
 
 void QuitAfterGameStop::executeTask()
 {

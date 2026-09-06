@@ -5,7 +5,7 @@
 #include "minecraft/PackProfile.h"
 #include "minecraft/VersionFilterData.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 
 #include "net/ApiRequest.h"

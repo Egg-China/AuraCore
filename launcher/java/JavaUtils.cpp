@@ -41,7 +41,7 @@
 #include <settings/Setting.h>
 
 #include <QDebug>
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 #include "FileSystem.h"
 #include "java/JavaInstallList.h"

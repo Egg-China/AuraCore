@@ -19,7 +19,7 @@
 
 #include <QFileInfo>
 #include <QSaveFile>
-#include "Application.h"
+#include "CoreApplication.h"
 
 #if defined(LAUNCHER_APPLICATION)
 

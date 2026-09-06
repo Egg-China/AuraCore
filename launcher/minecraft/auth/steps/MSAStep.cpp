@@ -41,12 +41,13 @@
 #include <QOAuthHttpServerReplyHandler>
 #include <QOAuthOobReplyHandler>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "BuildConfig.h"
 #include "FileSystem.h"
 
 #include <QProcess>
 #include <QSettings>
+#include <QCoreApplication>
 #include <QStandardPaths>
 
 bool isSchemeHandlerRegistered()
@@ -75,11 +76,11 @@ class CustomOAuthOobReplyHandler : public QOAuthOobReplyHandler {
    public:
     explicit CustomOAuthOobReplyHandler(QObject* parent = nullptr) : QOAuthOobReplyHandler(parent)
     {
-        connect(APPLICATION, &Application::oauthReplyRecieved, this, &QOAuthOobReplyHandler::callbackReceived);
+        connect(APPLICATION, &CoreApplication::oauthReplyRecieved, this, &QOAuthOobReplyHandler::callbackReceived);
     }
     ~CustomOAuthOobReplyHandler() override
     {
-        disconnect(APPLICATION, &Application::oauthReplyRecieved, this, &QOAuthOobReplyHandler::callbackReceived);
+        disconnect(APPLICATION, &CoreApplication::oauthReplyRecieved, this, &QOAuthOobReplyHandler::callbackReceived);
     }
     QString callback() const override { return BuildConfig.LAUNCHER_APP_BINARY_NAME + "://oauth/microsoft"; }
 

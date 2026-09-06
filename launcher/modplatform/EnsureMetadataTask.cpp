@@ -3,7 +3,7 @@
 #include <MurmurHash2.h>
 #include <QDebug>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "Json.h"
 
 #include "QObjectPtr.h"

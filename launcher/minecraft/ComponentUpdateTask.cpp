@@ -15,7 +15,7 @@
 #include "minecraft/ProfileUtils.h"
 #include "net/Mode.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "tasks/Task.h"
 
 #include "minecraft/Logging.h"

@@ -7,7 +7,7 @@
 #include "minecraft/PackProfile.h"
 #include "net/ChecksumValidator.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 
 #include "net/ApiRequest.h"
 

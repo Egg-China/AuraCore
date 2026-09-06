@@ -2,7 +2,7 @@
 
 #include <QNetworkRequest>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "minecraft/auth/Parsers.h"
 #include "net/NetUtils.h"
 #include "net/RawHeaderProxy.h"

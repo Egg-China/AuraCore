@@ -36,11 +36,11 @@
 
 #include <QCheckBox>
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "FileSystem.h"
 
 #include "InstanceList.h"
-#include "ui/dialogs/CustomMessageBox.h"
+#include <QDebug>
 
 QString askToUpdateInstanceDirName(BaseInstance* instance, const QString& oldName, const QString& newName, QWidget* parent)
 {
@@ -61,38 +61,19 @@ QString askToUpdateInstanceDirName(BaseInstance* instance, const QString& oldNam
 
     // Check for conflict
     if (QDir(newRoot).exists()) {
-        QMessageBox::warning(parent, QObject::tr("Cannot rename instance"),
-                             QObject::tr("New instance root (%1) already exists. <br />Only the metadata will be renamed.").arg(newRoot));
+        qWarning() << "New instance root already exists; only metadata will be renamed:" << newRoot;
         return QString();
     }
 
     if (instance->isRunning()) {
-        QMessageBox::warning(parent, QObject::tr("Cannot rename instance folder"),
-                             QObject::tr("The instance folder cannot be renamed while the instance is running.\n\n"
-                                         "Only the instance name will be changed. The folder will keep its current name."));
+        qWarning() << "Instance folder cannot be renamed while the instance is running";
         return QString();
     }
 
     // Ask if we should rename
     if (renamingMode == "AskEverytime") {
-        auto checkBox = new QCheckBox(QObject::tr("&Remember my choice"), parent);
-        auto dialog =
-            CustomMessageBox::selectable(parent, QObject::tr("Rename instance folder"),
-                                         QObject::tr("Would you also like to rename the instance folder?\n\n"
-                                                     "Old name: %1\n"
-                                                     "New name: %2")
-                                             .arg(oldName, newName),
-                                         QMessageBox::Question, QMessageBox::No | QMessageBox::Yes, QMessageBox::NoButton, checkBox);
-
-        auto res = dialog->exec();
-        if (checkBox->isChecked()) {
-            if (res == QMessageBox::Yes)
-                APPLICATION->settings()->set("InstRenamingMode", "PhysicalDir");
-            else
-                APPLICATION->settings()->set("InstRenamingMode", "MetadataOnly");
-        }
-        if (res == QMessageBox::No)
-            return QString();
+        // AuraCore is headless: default to renaming the physical directory.
+        qWarning() << "InstRenamingMode=AskEverytime is headless; renaming instance directory for" << oldName << "->" << newName;
     }
 
     // Check for linked instances
@@ -101,12 +82,7 @@ QString askToUpdateInstanceDirName(BaseInstance* instance, const QString& oldNam
 
     // Now we can confirm that a renaming is happening
     if (!instance->syncInstanceDirName(newRoot)) {
-        QMessageBox::warning(parent, QObject::tr("Cannot rename instance"),
-                             QObject::tr("An error occurred when performing the following renaming operation: <br/>"
-                                         " - Old instance root: %1<br/>"
-                                         " - New instance root: %2<br/>"
-                                         "Only the metadata is renamed.")
-                                 .arg(oldRoot, newRoot));
+        qWarning() << "Renaming instance root failed; only metadata renamed:" << oldRoot << "->" << newRoot;
         return QString();
     }
     return newRoot;
@@ -116,18 +92,7 @@ bool checkLinkedInstances(const QString& id, QWidget* parent, const QString& ver
 {
     auto linkedInstances = APPLICATION->instances()->getLinkedInstancesById(id);
     if (!linkedInstances.empty()) {
-        auto response = CustomMessageBox::selectable(parent, QObject::tr("There are linked instances"),
-                                                     QObject::tr("The following instance(s) might reference files in this instance:\n\n"
-                                                                 "%1\n\n"
-                                                                 "%2 it could break the other instance(s), \n\n"
-                                                                 "Do you wish to proceed?",
-                                                                 nullptr, linkedInstances.count())
-                                                         .arg(linkedInstances.join("\n"))
-                                                         .arg(verb),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
-        if (response != QMessageBox::Yes)
-            return false;
+        qWarning() << verb << "instance" << id << "that is linked by:" << linkedInstances << "- proceeding headlessly";
     }
     return true;
 }

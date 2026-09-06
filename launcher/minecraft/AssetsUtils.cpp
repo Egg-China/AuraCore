@@ -49,7 +49,7 @@
 #include "net/ApiRequest.h"
 #include "net/ChecksumValidator.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "net/Request.h"
 #include "update/AssetUpdateTask.h"
 

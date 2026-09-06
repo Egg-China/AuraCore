@@ -25,7 +25,7 @@
 #include "net/Mode.h"
 #include "net/NetJob.h"
 
-#include "Application.h"
+#include "CoreApplication.h"
 #include "settings/SettingsObject.h"
 #include "BuildConfig.h"
 #include "tasks/Task.h"
