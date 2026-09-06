@@ -63,9 +63,9 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - BuildConfig：git commit/tag/refspec 与时间戳在 `add_library` 前求值注入 `AURACORE_*` 宏。
 - vendored：libnbt++（NBT_BUILD_TESTS 默认关闭于 CI）、murmur2、qdcss、javacheck/NewLaunch（`--release 8`），
   tomlplusplus v3.4.0 走 FetchContent，zlib/libarchive 为外部静态依赖。
-### 阶段 2 —— 只读能力（当前）
+### 阶段 2 —— 只读能力
 - [x] 实例发现与元数据读取（CoreBackend ABI v0：list_instances / get_instance，JSON 输出）
-- [x] 版本清单 / 模组清单查询（list_component_lists 离线注册表 + list_component_versions 按 uid 读取 meta/<uid>/index.json；在线刷新随写路径接入）
+- [x] 版本清单 / 模组清单查询（list_component_lists 离线注册表 + list_component_versions 按 uid 读取 meta/<uid>/index.json；refresh_metadata / refresh_component 在线全量刷新 meta/index.json 与 meta/<uid>/index.json，本地实测拉取 1016 个 net.minecraft 版本）
 - [x] Java 运行时探测（detect_java 候选扫描 + probe_java 经 JavaCheck.jar 实测 version/vendor/arch，支持 AURACORE_JARS_DIR 覆盖）
 
 #### CoreBackend ABI v0（2026-09-06）
@@ -74,11 +74,18 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - 查询全部以紧凑 JSON 返回，调用方用 `auracore_free` 释放；错误经状态码 + `auracore_last_error` 暴露。
 - `auracore_backend.dll/.so` 链接整个 auracore_core（全量符号经 DLL 链接补齐：archive / helpers / icons / meta JsonFormat /
   TaskStepWrapper / QuitAfterGameStop / JavaMetadata / PixmapCache::s_instance）。
-- `auracore-probe` CLI 冒烟工具：instances / java / probe-java / component-lists / component-versions 五查询，CI 已纳入运行。
+- `auracore-probe` CLI 冒烟工具：instances / java / probe-java / component-lists / component-versions 五查询 + create→wait→list 创建链，CI 已纳入运行。
+- 异步任务面：create_instance 返回 taskId，宿主轮询 task_status / 同步等待 wait_task / 取消 cancel_task；
+  任务登记表上限 32 条已完成记录，防止长生命周期宿主膨胀。
+  CoreApplication 注册完整全局设置块（经脚本审计覆盖 BaseInstance / MinecraftInstance 引用的全部键），
+  头less 创建默认 DownloadGameFilesDuringInstanceCreation=false，实例创建只写元数据，游戏文件留给启动时。
 - 严格离线：meta 无缓存时 `cached:false`，绝不触发网络（loadTask(Offline) 无文件会回源 + NetJob 自动重试死循环，
   ABI 侧用文件存在性守卫 + 30s 事件循环安全阀双保险）。
-### 阶段 3 —— 写路径
-- [ ] 实例创建 / 编辑 / 删除 / 导入导出
+### 阶段 3 —— 写路径（当前）
+- [x] 在线元数据刷新（refresh_metadata / refresh_component，run 34018092685 双平台绿）
+- [x] 实例创建（auracore_create_instance + 通用异步任务面 task_status / wait_task / cancel_task，
+  VanillaCreationTask 经 InstanceStaging 落盘 instance.cfg + mmc-pack.json，头less 默认只写元数据不下载游戏文件）
+- [ ] 实例编辑 / 删除 / 导入导出
 - [ ] 下载与镜像源策略
 - [ ] 账户体系（微软登录、离线档案）
 
