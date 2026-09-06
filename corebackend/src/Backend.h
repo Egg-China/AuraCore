@@ -43,12 +43,14 @@ class Backend {
     QByteArray probeJava();
     QByteArray listComponentLists();
     QByteArray listComponentVersions(const QString& uid);
+    QByteArray refreshMetadata();
+    QByteArray refreshComponent(const QString& uid);
 
    private:
     explicit Backend(std::unique_ptr<CoreApplication> core);
 
     bool loadMetaCache();
-    static bool runTaskSync(const Task::Ptr& task);
+    static bool runTaskSync(const Task::Ptr& task, int valveMs = 30000);
 
     std::unique_ptr<CoreApplication> m_core;
     QString m_lastError;

@@ -87,6 +87,13 @@ AURACORE_BACKEND_API auracore_status auracore_probe_java(auracore_backend* backe
 /* Returns the cached version list of one component uid as
  * { uid, cached: bool, versions: [...] }. No network access is performed. */
 AURACORE_BACKEND_API auracore_status auracore_list_component_versions(auracore_backend* backend, const char* uid, char** out_json);
+/* Refreshes meta/index.json from the network (bounded by a two minute
+ * safety valve). Returns { refreshed, lists, error? }; failures do not
+ * throw a backend status so hosts can treat offline mode as data. */
+AURACORE_BACKEND_API auracore_status auracore_refresh_metadata(auracore_backend* backend, char** out_json);
+
+/* Refreshes one component's version list (meta/<uid>/index.json). */
+AURACORE_BACKEND_API auracore_status auracore_refresh_component(auracore_backend* backend, const char* uid, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

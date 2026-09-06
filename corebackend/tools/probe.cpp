@@ -72,6 +72,17 @@ int main(int argc, char** argv)
     printQuery("java", backend, auracore_detect_java);
     printQuery("probe-java", backend, auracore_probe_java);
     printQuery("component-lists", backend, auracore_list_component_lists);
+    printQuery("refresh-metadata", backend, auracore_refresh_metadata);
+
+    {
+        char* refreshJson = nullptr;
+        const auracore_status refreshStatus = auracore_refresh_component(backend, "net.minecraft", &refreshJson);
+        std::printf("--- refresh-component net.minecraft (status %d) ---\n", int(refreshStatus));
+        if (refreshJson != nullptr) {
+            std::puts(refreshJson);
+            auracore_free(refreshJson);
+        }
+    }
 
     char* versionJson = nullptr;
     const auracore_status versionStatus = auracore_list_component_versions(backend, "net.minecraft", &versionJson);

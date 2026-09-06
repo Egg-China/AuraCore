@@ -147,7 +147,7 @@ QByteArray Backend::detectJava()
     return toJson(QJsonDocument(array));
 }
 
-bool Backend::runTaskSync(const Task::Ptr& task)
+bool Backend::runTaskSync(const Task::Ptr& task, int valveMs)
 {
     QEventLoop loop;
     bool succeeded = false;
@@ -159,7 +159,7 @@ bool Backend::runTaskSync(const Task::Ptr& task)
     // wait forever because quit() fired before the loop began. Corrupt meta
     // caches also fall back to the network with endless retries, so the loop
     // carries a safety valve regardless.
-    QTimer::singleShot(30000, &loop, &QEventLoop::quit);
+    QTimer::singleShot(valveMs, &loop, &QEventLoop::quit);
     if (!task->isFinished()) {
         loop.exec();
     }
@@ -284,6 +284,38 @@ QByteArray Backend::listComponentVersions(const QString& uid)
         { "versions", versions },
     }));
 }
+QByteArray Backend::refreshMetadata()
+{
+    auto* index = m_core->metadataIndex();
+    const bool refreshed = runTaskSync(index->loadTask(Net::Mode::Online, true), 120000);
+    if (refreshed) {
+        m_metaLoaded = true;
+    }
+    QJsonObject object{
+        { "refreshed", refreshed },
+        { "lists", double(index->lists().size()) },
+    };
+    if (!refreshed) {
+        object.insert("error", m_lastError.isEmpty() ? QStringLiteral("metadata refresh failed or timed out") : m_lastError);
+    }
+    return toJson(QJsonDocument(object));
+}
+
+QByteArray Backend::refreshComponent(const QString& uid)
+{
+    auto* index = m_core->metadataIndex();
+    const auto versionList = index->get(uid);
+    const bool refreshed = runTaskSync(versionList->loadTask(Net::Mode::Online, true), 120000);
+    QJsonObject object{
+        { "uid", uid },
+        { "refreshed", refreshed },
+        { "versions", double(versionList->versions().size()) },
+    };
+    if (!refreshed) {
+        object.insert("error", m_lastError.isEmpty() ? QStringLiteral("component refresh failed or timed out") : m_lastError);
+    }
+    return toJson(QJsonDocument(object));
+}
 }  // namespace AuraCore
 
 struct auracore_backend {
@@ -390,6 +422,21 @@ auracore_status auracore_probe_java(auracore_backend* backend, char** out_json)
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->probeJava(), out_json);
+}
+auracore_status auracore_refresh_metadata(auracore_backend* backend, char** out_json)
+{
+    if (backend == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->refreshMetadata(), out_json);
+}
+
+auracore_status auracore_refresh_component(auracore_backend* backend, const char* uid, char** out_json)
+{
+    if (backend == nullptr || uid == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->refreshComponent(QString::fromUtf8(uid)), out_json);
 }
 void auracore_free(char* text)
 {
