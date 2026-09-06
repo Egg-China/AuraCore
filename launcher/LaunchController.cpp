@@ -112,11 +112,18 @@ LaunchDecision LaunchController::decideLaunchMode()
     const auto* accounts = APPLICATION->accounts();
     MinecraftAccountPtr accountToCheck = nullptr;
 
-    if (m_accountToUse->accountType() != AccountType::Offline) {
-        accountToCheck = m_accountToUse->ownsMinecraft() ? m_accountToUse : nullptr;
-    } else if (const auto defaultAccount = accounts->defaultAccount(); defaultAccount && defaultAccount->ownsMinecraft()) {
-        accountToCheck = defaultAccount;
-    } else {
+    if (m_accountToUse->accountType() == AccountType::Offline) {
+        // An explicitly selected offline account is directly launchable; the
+        // entitlement hunt below only applies to online accounts, and routing
+        // offline launches through the demo branch would block headless hosts.
+        m_actualLaunchMode = m_wantedLaunchMode;
+        return LaunchDecision::Continue;
+    }
+
+    accountToCheck = m_accountToUse->ownsMinecraft() ? m_accountToUse : nullptr;
+    if (accountToCheck == nullptr) {
+        // The selected online account lacks entitlement; borrow the state of
+        // any entitled account before falling back to the demo decision.
         for (int i = 0; i < accounts->count(); i++) {
             if (const auto account = accounts->at(i); account->ownsMinecraft()) {
                 accountToCheck = account;
@@ -371,8 +378,15 @@ void LaunchController::onProgressRequested(Task* task) const
     connect(task, &Task::failed, &loop, &QEventLoop::quit);
     connect(task, &Task::aborted, &loop, &QEventLoop::quit);
     m_launcher->proceed();
-    task->start();
-    loop.exec();
+    // The wrapper step is already running here; starting it again trips the
+    // task assertions. A step that completed synchronously inside proceed()
+    // must not enter the wait loop below either.
+    if (!task->isRunning() && !task->isFinished()) {
+        task->start();
+    }
+    if (!task->isFinished()) {
+        loop.exec();
+    }
 }
 
 bool LaunchController::abort()

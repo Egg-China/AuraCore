@@ -154,6 +154,19 @@ AURACORE_BACKEND_API auracore_status auracore_begin_msa_login(auracore_backend* 
 /* Returns { codeIssued, verificationUrl, userCode, expiresIn } for a login
  * task, or { codeIssued: false } while the provider has not answered yet. */
 AURACORE_BACKEND_API auracore_status auracore_msa_login_info(auracore_backend* backend, const char* task_id, char** out_json);
+/* Starts the full launch chain (component update, auth, process start) for an
+ * instance. account_profile selects an explicit account (empty falls back to
+ * the default); offline_name names the player for accountless launches. Both
+ * may be NULL. Returns { launched, taskId, ... }; the game download happens
+ * on first launch. */
+AURACORE_BACKEND_API auracore_status auracore_launch_instance(auracore_backend* backend,
+                                                              const char* id,
+                                                              const char* account_profile,
+                                                              const char* offline_name,
+                                                              char** out_json);
+
+/* Asks the running instance process to terminate. */
+AURACORE_BACKEND_API auracore_status auracore_stop_instance(auracore_backend* backend, const char* id, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

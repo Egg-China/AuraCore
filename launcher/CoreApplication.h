@@ -141,7 +141,8 @@ class CoreApplication : public QObject {
                 LaunchMode mode = LaunchMode::Normal,
                 MinecraftTarget::Ptr targetToJoin = nullptr,
                 MinecraftAccountPtr accountToUse = nullptr,
-                const QString& offlineName = QString());
+                const QString& offlineName = QString(),
+                shared_qobject_ptr<LaunchController>* outController = nullptr);
 
     /// Aborts the controller currently managing the given instance, if any.
     bool kill(BaseInstance* instance);

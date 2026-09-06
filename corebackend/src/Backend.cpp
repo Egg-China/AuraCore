@@ -46,6 +46,8 @@
 #include "meta/Version.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
 #include "minecraft/auth/AccountList.h"
+#include "LaunchController.h"
+#include "minecraft/launch/MinecraftTarget.h"
 #include "InstanceDirUpdate.h"
 #include "InstanceImportTask.h"
 #include "MMCZip.h"
@@ -738,6 +740,72 @@ QByteArray Backend::msaLoginInfo(const QString& taskId)
         { "expiresIn", tracked->msaExpiresIn },
     }));
 }
+QByteArray Backend::launchInstance(const QString& id, const QString& accountProfile, const QString& offlineName)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+
+    MinecraftAccountPtr account;
+    if (!accountProfile.isEmpty()) {
+        auto* accounts = m_core->accounts();
+        for (int i = 0; i < accounts->count(); ++i) {
+            if (accounts->at(i)->profileName() == accountProfile) {
+                account = accounts->at(i);
+                break;
+            }
+        }
+        if (account == nullptr) {
+            m_lastError = QStringLiteral("Unknown account profile name: %1").arg(accountProfile);
+            return {};
+        }
+    }
+
+    shared_qobject_ptr<LaunchController> controller;
+    if (!m_core->launch(instance, LaunchMode::Normal, nullptr, account, offlineName, &controller)) {
+        m_lastError = QStringLiteral("Instance cannot be launched in its current state");
+        return {};
+    }
+    if (controller == nullptr) {
+        m_lastError = QStringLiteral("Launch controller was not created");
+        return {};
+    }
+
+    const auto tracked = trackTask(controller, QStringLiteral("launch-instance"));
+    Q_UNUSED(tracked);
+    return toJson(QJsonDocument(QJsonObject{
+        { "launched", true },
+        { "taskId", QString::number(m_nextTaskId - 1) },
+        { "id", id },
+        { "account", accountProfile },
+        { "offlineName", offlineName },
+    }));
+}
+
+QByteArray Backend::stopInstance(const QString& id)
+{
+    auto* instances = m_core->instances();
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            const bool stopped = m_core->kill(instances->at(i));
+            return toJson(QJsonDocument(QJsonObject{
+                { "stopped", stopped },
+                { "id", id },
+            }));
+        }
+    }
+    m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+    return {};
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -1052,6 +1120,27 @@ auracore_status auracore_msa_login_info(auracore_backend* backend, const char* t
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->msaLoginInfo(QString::fromUtf8(task_id)), out_json);
+}
+auracore_status auracore_launch_instance(auracore_backend* backend,
+                                         const char* id,
+                                         const char* account_profile,
+                                         const char* offline_name,
+                                         char** out_json)
+{
+    if (backend == nullptr || id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const auto profile = account_profile == nullptr ? QString() : QString::fromUtf8(account_profile);
+    const auto offline = offline_name == nullptr ? QString() : QString::fromUtf8(offline_name);
+    return writeJson(backend->backend->launchInstance(QString::fromUtf8(id), profile, offline), out_json);
+}
+
+auracore_status auracore_stop_instance(auracore_backend* backend, const char* id, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->stopInstance(QString::fromUtf8(id)), out_json);
 }
 void auracore_free(char* text)
 {

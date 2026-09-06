@@ -347,7 +347,8 @@ bool CoreApplication::launch(MinecraftInstance* instance,
                              LaunchMode mode,
                              MinecraftTarget::Ptr targetToJoin,
                              MinecraftAccountPtr accountToUse,
-                             const QString& offlineName)
+                             const QString& offlineName,
+                             shared_qobject_ptr<LaunchController>* outController)
 {
     if (!instance->canLaunch()) {
         if (instance->isRunning()) {
@@ -370,6 +371,9 @@ bool CoreApplication::launch(MinecraftInstance* instance,
         controller->setOfflineName(offlineName);
         connect(controller.get(), &LaunchController::finished, this, &CoreApplication::controllerFinished);
         m_controllers.insert(instance->id(), controller);
+        if (outController != nullptr) {
+            *outController = controller;
+        }
     }
     QMetaObject::invokeMethod(controller.get(), &Task::start, Qt::QueuedConnection);
     return true;

@@ -42,3 +42,9 @@ add_jar(NewLaunch ${SRC})
 add_jar(NewLaunchLegacy ${LEGACY_SRC} INCLUDE_JARS NewLaunch)
 install_jar(NewLaunch DESTINATION "jars")
 install_jar(NewLaunchLegacy DESTINATION "jars")
+# Keep the canonical jar bundle adjacent to the backend binaries during
+# development; CoreApplication::getJarPath probes <appdir>/../jars.
+add_custom_command(TARGET NewLaunch POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/NewLaunch.jar" "${CMAKE_BINARY_DIR}/jars/NewLaunch.jar")
+add_custom_command(TARGET NewLaunchLegacy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/NewLaunchLegacy.jar" "${CMAKE_BINARY_DIR}/jars/NewLaunchLegacy.jar")

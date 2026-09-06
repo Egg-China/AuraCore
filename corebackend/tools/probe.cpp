@@ -228,6 +228,62 @@ int main(int argc, char** argv)
         }
         printQuery("instances-after-import", backend, auracore_list_instances);
 
+        // Real launch e2e is opt-in: it downloads the game distribution and
+        // starts a JVM, which is too heavy for the CI smoke job.
+        if (std::getenv("AURACORE_PROBE_LAUNCH") != nullptr) {
+            char* launchAccountJson = nullptr;
+            auracore_add_offline_account(backend, "AuraTester", &launchAccountJson);
+            if (launchAccountJson != nullptr) {
+                std::puts(launchAccountJson);
+                auracore_free(launchAccountJson);
+            }
+            char* defaultJson2 = nullptr;
+            auracore_set_default_account(backend, "AuraTester", &defaultJson2);
+            if (defaultJson2 != nullptr) {
+                auracore_free(defaultJson2);
+            }
+
+            char* launchJson = nullptr;
+            const auracore_status launchStatus = auracore_launch_instance(backend, "Aura Probe Reborn", "AuraTester", nullptr, &launchJson);
+            std::printf("--- launch-instance (status %d) ---\n", int(launchStatus));
+            char launchTaskId[32] = "";
+            if (launchJson != nullptr) {
+                std::puts(launchJson);
+                findJsonValue(launchJson, "taskId", launchTaskId, sizeof(launchTaskId));
+                auracore_free(launchJson);
+            }
+            if (launchTaskId[0] != '\0') {
+                // A launch task stays alive for the whole game session, so the
+                // probe only gives the update/auth chain time to reach the
+                // process spawn, reports the snapshot, then stops the game.
+                char* waitJson = nullptr;
+                const auracore_status waitStatus = auracore_wait_task(backend, launchTaskId, 150000, &waitJson);
+                std::printf("--- wait-launch (status %d) ---\n", int(waitStatus));
+                if (waitJson != nullptr) {
+                    std::puts(waitJson);
+                    auracore_free(waitJson);
+                }
+                char* statusJson = nullptr;
+                auracore_task_status(backend, launchTaskId, &statusJson);
+                std::printf("--- launch-status ---\n");
+                if (statusJson != nullptr) {
+                    std::puts(statusJson);
+                    auracore_free(statusJson);
+                }
+            }
+            char* stopJson = nullptr;
+            const auracore_status stopStatus = auracore_stop_instance(backend, "Aura Probe Reborn", &stopJson);
+            std::printf("--- stop-instance (status %d) ---\n", int(stopStatus));
+            if (stopJson != nullptr) {
+                std::puts(stopJson);
+                auracore_free(stopJson);
+            }
+            char* removeAccountJson = nullptr;
+            auracore_remove_account(backend, "AuraTester", &removeAccountJson);
+            if (removeAccountJson != nullptr) {
+                auracore_free(removeAccountJson);
+            }
+        }
         char* cleanupJson = nullptr;
         const auracore_status cleanupStatus = auracore_delete_instance(backend, "Aura Probe Reborn", &cleanupJson);
         std::printf("--- cleanup-delete (status %d) ---\n", int(cleanupStatus));
