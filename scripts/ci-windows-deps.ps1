@@ -28,6 +28,13 @@ Invoke-CMakeStep 'Configure zlib' @(
 Invoke-CMakeStep 'Build zlib' @('--build', 'zlib-build')
 Invoke-CMakeStep 'Install zlib' @('--install', 'zlib-build')
 
+# zlib's CMake installs shared and static variants; keep only the static one so
+# libarchive and the backend embed zlib instead of importing DLL symbols.
+Get-ChildItem $deps -Recurse -File -Include 'libzlib.dll', 'libzlib.dll.a', 'zlib1.dll' | Remove-Item -Force
+if (-not (Test-Path (Join-Path $deps 'lib\libzlibstatic.a'))) {
+    throw 'static zlib archive was not installed'
+}
+
 Write-Output '==> Download libarchive 3.7.7'
 Invoke-WebRequest -Uri 'https://github.com/libarchive/libarchive/releases/download/v3.7.7/libarchive-3.7.7.tar.xz' -OutFile 'libarchive.tar.xz'
 tar -xf libarchive.tar.xz
