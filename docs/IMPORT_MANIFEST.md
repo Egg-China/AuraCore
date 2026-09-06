@@ -51,3 +51,12 @@
 - vendored 目标：javacheck、NewLaunch/NewLaunchLegacy（`--release 8`，产物安装到 `jars/`）、libnbt++、murmur2、qdcss。
 - CI：`.github/workflows/build.yml` 覆盖 windows-x64-mingw（Qt 6.8.3 + tools_mingw1310，zlib/libarchive 源码静态构建）
   与 linux-x64（Qt 6.8.3 + apt libarchive/zlib），只构建核心目标与 jar，不发 Release。
+
+## 阶段 2 记录（2026-09-06）
+
+- 新增 `corebackend/`：稳定 C ABI（`auracore/backend.h`）+ `auracore_backend` 共享库 + `auracore-probe` 冒烟工具。
+- 补齐 DLL 链接暴露的缺失源：`archive/`、`modplatform/helpers/`、`icons/`、`meta/JsonFormat.*`、
+  `launch/TaskStepWrapper.*`、`launch/steps/QuitAfterGameStop.*`、`java/JavaMetadata.*`，
+  以及 `PixmapCache::s_instance` 定义（对齐上游 Application.cpp）。
+- 修复导入期遗留：murmur2 / qdcss / javacheck 共 8 个文件在 git blob 中为 NUL 污染（本地工作区干净但
+  stat 缓存掩盖了差异，新 clone 才暴露），已全部重新提交。
