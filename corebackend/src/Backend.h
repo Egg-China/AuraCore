@@ -48,6 +48,10 @@ class Backend {
     QByteArray refreshComponent(const QString& uid);
 
     QByteArray createInstance(const QString& name, const QString& gameVersion, const QString& group);
+    QByteArray renameInstance(const QString& id, const QString& newName);
+    QByteArray setInstanceGroup(const QString& id, const QString& group);
+    QByteArray setInstanceIcon(const QString& id, const QString& iconKey);
+    QByteArray deleteInstance(const QString& id);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);

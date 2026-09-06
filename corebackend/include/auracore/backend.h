@@ -113,6 +113,20 @@ AURACORE_BACKEND_API auracore_status auracore_wait_task(auracore_backend* backen
 
 /* Requests cancellation; returns OK when the task accepted the abort. */
 AURACORE_BACKEND_API auracore_status auracore_cancel_task(auracore_backend* backend, const char* task_id);
+/* Renames an instance: updates instance.cfg and, when the physical directory
+ * can be renamed, also moves the directory and reloads the instance list.
+ * Returns { renamed, oldId, id, name, dirRenamed }. */
+AURACORE_BACKEND_API auracore_status auracore_rename_instance(auracore_backend* backend, const char* id, const char* new_name, char** out_json);
+
+/* Moves an instance between groups; an empty string clears the group. */
+AURACORE_BACKEND_API auracore_status auracore_set_instance_group(auracore_backend* backend, const char* id, const char* group, char** out_json);
+
+/* Sets the icon key used by launcher UIs. */
+AURACORE_BACKEND_API auracore_status auracore_set_instance_icon(auracore_backend* backend, const char* id, const char* icon_key, char** out_json);
+
+/* Deletes the instance directory, its shortcuts, and its group membership.
+ * Returns { deleted, id } or { deleted: false, error }. */
+AURACORE_BACKEND_API auracore_status auracore_delete_instance(auracore_backend* backend, const char* id, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

@@ -44,6 +44,7 @@
 #include "meta/Index.h"
 #include "meta/Version.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
+#include "InstanceDirUpdate.h"
 #include "meta/VersionList.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
@@ -68,13 +69,16 @@ QJsonObject versionToJson(const Meta::Version::Ptr& version)
         { "recommended", version->isRecommended() },
     };
 }
-QJsonObject instanceToJson(MinecraftInstance* instance)
+QJsonObject instanceToJson(MinecraftInstance* instance, const QString& group)
 {
     QJsonObject object;
     object.insert("id", instance->id());
     object.insert("name", instance->name());
     object.insert("dir", instance->instanceRoot());
     object.insert("icon", instance->iconKey());
+    if (!group.isEmpty()) {
+        object.insert("group", group);
+    }
     object.insert("lastLaunch", double(instance->lastLaunch()));
 
     // Best effort: the component table may not have finished loading for
@@ -117,7 +121,7 @@ QByteArray Backend::listInstances()
     QJsonArray array;
     const auto* instances = m_core->instances();
     for (int i = 0; i < instances->count(); ++i) {
-        array.append(instanceToJson(instances->at(i)));
+        array.append(instanceToJson(instances->at(i), instances->getInstanceGroup(instances->at(i)->id())));
     }
     return toJson(QJsonDocument(array));
 }
@@ -128,7 +132,7 @@ QByteArray Backend::getInstance(const QString& id)
     for (int i = 0; i < instances->count(); ++i) {
         auto* instance = instances->at(i);
         if (instance->id() == id) {
-            return toJson(QJsonDocument(instanceToJson(instance)));
+            return toJson(QJsonDocument(instanceToJson(instance, instances->getInstanceGroup(instance->id()))));
         }
     }
     m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
@@ -407,6 +411,123 @@ QByteArray Backend::createInstance(const QString& name, const QString& gameVersi
     }));
 }
 
+QByteArray Backend::renameInstance(const QString& id, const QString& newName)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+    if (newName.isEmpty()) {
+        m_lastError = QStringLiteral("Instance name must not be empty");
+        return {};
+    }
+
+    const QString oldName = instance->name();
+    instance->setName(newName);
+    const QString newRoot = askToUpdateInstanceDirName(instance, oldName, newName, nullptr);
+    const bool dirRenamed = !newRoot.isEmpty();
+    if (dirRenamed) {
+        // The staged in-memory objects point at the old directory now.
+        if (instances->loadList() != InstanceList::NoError) {
+            m_lastError = QStringLiteral("Instance list reload failed after directory rename");
+            return {};
+        }
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "renamed", true },
+        { "oldId", id },
+        { "id", dirRenamed ? QFileInfo(newRoot).fileName() : id },
+        { "name", newName },
+        { "dirRenamed", dirRenamed },
+    }));
+}
+
+QByteArray Backend::setInstanceGroup(const QString& id, const QString& group)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+    instances->setInstanceGroup(id, group);
+    return toJson(QJsonDocument(QJsonObject{
+        { "ok", true },
+        { "id", id },
+        { "group", group },
+    }));
+}
+
+QByteArray Backend::setInstanceIcon(const QString& id, const QString& iconKey)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+    instance->setIconKey(iconKey);
+    return toJson(QJsonDocument(QJsonObject{
+        { "ok", true },
+        { "id", id },
+        { "icon", iconKey },
+    }));
+}
+
+QByteArray Backend::deleteInstance(const QString& id)
+{
+    auto* instances = m_core->instances();
+    bool found = false;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+
+    instances->deleteInstance(id);
+    if (instances->loadList() != InstanceList::NoError) {
+        m_lastError = QStringLiteral("Instance list reload failed after delete");
+        return {};
+    }
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            return toJson(QJsonDocument(QJsonObject{
+                { "deleted", false },
+                { "id", id },
+                { "error", QStringLiteral("Instance directory delete did not complete") },
+            }));
+        }
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "deleted", true },
+        { "id", id },
+    }));
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -627,6 +748,38 @@ auracore_status auracore_cancel_task(auracore_backend* backend, const char* task
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return backend->backend->cancelTask(QString::fromUtf8(task_id)) ? AURACORE_OK : AURACORE_ERROR_BACKEND;
+}
+auracore_status auracore_rename_instance(auracore_backend* backend, const char* id, const char* new_name, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || new_name == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->renameInstance(QString::fromUtf8(id), QString::fromUtf8(new_name)), out_json);
+}
+
+auracore_status auracore_set_instance_group(auracore_backend* backend, const char* id, const char* group, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    const QString groupName = group == nullptr ? QString() : QString::fromUtf8(group);
+    return writeJson(backend->backend->setInstanceGroup(QString::fromUtf8(id), groupName), out_json);
+}
+
+auracore_status auracore_set_instance_icon(auracore_backend* backend, const char* id, const char* icon_key, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || icon_key == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->setInstanceIcon(QString::fromUtf8(id), QString::fromUtf8(icon_key)), out_json);
+}
+
+auracore_status auracore_delete_instance(auracore_backend* backend, const char* id, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->deleteInstance(QString::fromUtf8(id)), out_json);
 }
 void auracore_free(char* text)
 {

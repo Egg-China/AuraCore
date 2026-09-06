@@ -20,8 +20,9 @@
 #include <QDir>
 #include <QTemporaryDir>
 
-#include <cstdio>
+#include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "auracore/backend.h"
 
@@ -42,6 +43,24 @@ void printQuery(const char* label, auracore_backend* backend, auracore_status (*
 
 }  // namespace
 
+// Tiny scanner for flat JSON string values such as "taskId":"7". Returns
+// false when the key is absent; good enough for the probe's own responses.
+static bool findJsonValue(const char* json, const char* key, char* out, size_t outSize)
+{
+    const std::string needle = std::string("\"") + key + "\":\"";
+    const char* start = std::strstr(json, needle.c_str());
+    if (start == nullptr) {
+        return false;
+    }
+    start += needle.size();
+    const char* end = std::strchr(start, '"');
+    if (end == nullptr || size_t(end - start) >= outSize) {
+        return false;
+    }
+    std::memcpy(out, start, size_t(end - start));
+    out[end - start] = '\0';
+    return true;
+}
 int main(int argc, char** argv)
 {
     QCoreApplication application(argc, argv);
@@ -120,6 +139,47 @@ int main(int argc, char** argv)
             free(taskId);
         }
         printQuery("instances-after-create", backend, auracore_list_instances);
+    }
+    {
+        char currentId[128] = "Aura Probe";
+        char* renameJson = nullptr;
+        const auracore_status renameStatus = auracore_rename_instance(backend, currentId, "Aura Probe 2", &renameJson);
+        std::printf("--- rename-instance (status %d) ---\n", int(renameStatus));
+        if (renameJson != nullptr) {
+            std::puts(renameJson);
+            char newId[128];
+            if (findJsonValue(renameJson, "id", newId, sizeof(newId))) {
+                std::snprintf(currentId, sizeof(currentId), "%s", newId);
+            }
+            auracore_free(renameJson);
+        }
+
+        char* groupJson = nullptr;
+        const auracore_status groupStatus = auracore_set_instance_group(backend, currentId, "E2E Group", &groupJson);
+        std::printf("--- set-group (status %d) ---\n", int(groupStatus));
+        if (groupJson != nullptr) {
+            std::puts(groupJson);
+            auracore_free(groupJson);
+        }
+
+        char* iconJson = nullptr;
+        const auracore_status iconStatus = auracore_set_instance_icon(backend, currentId, "vanilla", &iconJson);
+        std::printf("--- set-icon (status %d) ---\n", int(iconStatus));
+        if (iconJson != nullptr) {
+            std::puts(iconJson);
+            auracore_free(iconJson);
+        }
+
+        printQuery("instances-after-edit", backend, auracore_list_instances);
+
+        char* deleteJson = nullptr;
+        const auracore_status deleteStatus = auracore_delete_instance(backend, currentId, &deleteJson);
+        std::printf("--- delete-instance (status %d) ---\n", int(deleteStatus));
+        if (deleteJson != nullptr) {
+            std::puts(deleteJson);
+            auracore_free(deleteJson);
+        }
+        printQuery("instances-after-delete", backend, auracore_list_instances);
     }
     auracore_backend_destroy(backend);
     return 0;
