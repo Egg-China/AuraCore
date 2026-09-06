@@ -19,11 +19,13 @@
 #pragma once
 
 #include <QByteArray>
+#include <QCoreApplication>
 #include <QHash>
 #include <QString>
 
 #include <functional>
 #include <memory>
+#include <vector>
 #include "tasks/Task.h"
 
 class CoreApplication;
@@ -71,7 +73,7 @@ class Backend {
     bool cancelTask(const QString& taskId);
 
    private:
-    explicit Backend(std::unique_ptr<CoreApplication> core);
+    Backend(const QString& dataPath, bool ownApplication);
 
     bool loadMetaCache();
 
@@ -100,6 +102,12 @@ class Backend {
     std::unique_ptr<CoreApplication> m_core;
     QString m_lastError;
     bool m_metaLoaded = false;
+
+    // Owned core application created for non-Qt hosts such as JVM embedders.
+    std::unique_ptr<QCoreApplication> m_ownedApplication;
+    std::vector<std::unique_ptr<char[]>> m_applicationArguments;
+    std::vector<char*> m_argumentPointers;
+    int m_argumentCount = 1;
 
     QHash<QString, TrackedTaskPtr> m_tasks;
     int m_nextTaskId = 1;

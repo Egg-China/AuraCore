@@ -102,27 +102,34 @@ QJsonObject instanceToJson(MinecraftInstance* instance, const QString& group)
 
 }  // namespace
 
-Backend::Backend(std::unique_ptr<CoreApplication> core) : m_core(std::move(core)) {}
+Backend::Backend(const QString& dataPath, bool ownApplication)
+{
+    if (ownApplication && QCoreApplication::instance() == nullptr) {
+        // Embedders such as the JVM host do not provide a Qt application; the
+        // argument storage must outlive the application object.
+        m_applicationArguments.emplace_back(new char[sizeof("auracore-backend")]);
+        std::memcpy(m_applicationArguments.back().get(), "auracore-backend", sizeof("auracore-backend"));
+        m_argumentPointers.reserve(2);
+        m_argumentPointers.push_back(m_applicationArguments.back().get());
+        m_argumentPointers.push_back(nullptr);
+        m_ownedApplication = std::make_unique<QCoreApplication>(m_argumentCount, m_argumentPointers.data());
+    }
+    m_core = std::make_unique<CoreApplication>(dataPath);
+}
 
 Backend::~Backend() = default;
 
 std::unique_ptr<Backend> Backend::create(const QString& dataPath, QString* error)
 {
-    if (QCoreApplication::instance() == nullptr) {
-        if (error) {
-            *error = QStringLiteral("A QCoreApplication must exist before creating the backend");
-        }
-        return nullptr;
-    }
-
-    auto core = std::make_unique<CoreApplication>(dataPath);
-    if (!core->initialize()) {
+    const bool ownApplication = QCoreApplication::instance() == nullptr;
+    auto backend = std::unique_ptr<Backend>(new Backend(dataPath, ownApplication));
+    if (!backend->m_core->initialize()) {
         if (error) {
             *error = QStringLiteral("Failed to initialize the AuraCore data directory: %1").arg(dataPath);
         }
         return nullptr;
     }
-    return std::unique_ptr<Backend>(new Backend(std::move(core)));
+    return backend;
 }
 
 QByteArray Backend::listInstances()
