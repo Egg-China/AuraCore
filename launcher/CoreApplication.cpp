@@ -36,6 +36,14 @@
 #include "BuildConfig.h"
 #include "FileSystem.h"
 #include "net/HttpMetaCache.h"
+#ifdef Q_OS_LINUX
+#include <dlfcn.h>
+#include "LibraryUtils.h"
+#if __has_include(<gamemode_client.h>)
+#include <gamemode_client.h>
+#define AURACORE_HAVE_GAMEMODE
+#endif
+#endif
 #include "icons/IconList.h"
 #include "InstanceList.h"
 #include "java/JavaInstallList.h"
@@ -46,6 +54,9 @@
 #include "settings/INISettingsObject.h"
 #include "settings/Setting.h"
 #include "settings/SettingsObject.h"
+
+// Defined here (as in upstream Application.cpp) because MTPixmapCache.h only declares it.
+PixmapCache* PixmapCache::s_instance = nullptr;
 
 namespace {
 CoreApplication* s_instance = nullptr;
@@ -328,10 +339,12 @@ void CoreApplication::updateCapabilities()
     if (!getFlameAPIKey().isEmpty()) {
         m_capabilities |= SupportsFlame;
     }
-#ifdef Q_OS_LINUX
+#ifdef AURACORE_HAVE_GAMEMODE
     if (gamemode_query_status() >= 0) {
         m_capabilities |= SupportsGameMode;
     }
+#endif
+#ifdef Q_OS_LINUX
     if (!LibraryUtils::findMangoHud().isEmpty()) {
         m_capabilities |= SupportsMangoHud;
     }
