@@ -9,4 +9,3 @@ set(MURMUR_SOURCES
 add_library(Launcher_murmur2 STATIC ${MURMUR_SOURCES})
 target_include_directories(Launcher_murmur2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} "src" )
 
-generate_export_header(Launcher_murmur2)
