@@ -65,8 +65,8 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
   tomlplusplus v3.4.0 走 FetchContent，zlib/libarchive 为外部静态依赖。
 ### 阶段 2 —— 只读能力（当前）
 - [x] 实例发现与元数据读取（CoreBackend ABI v0：list_instances / get_instance，JSON 输出）
-- [x] 版本清单 / 模组清单查询（离线缓存 list_component_lists；在线刷新随写路径接入）
-- [x] Java 运行时探测（本地候选扫描并过滤不存在路径；版本/架构校验待 JavaChecker 集成）
+- [x] 版本清单 / 模组清单查询（list_component_lists 离线注册表 + list_component_versions 按 uid 读取 meta/<uid>/index.json；在线刷新随写路径接入）
+- [x] Java 运行时探测（detect_java 候选扫描 + probe_java 经 JavaCheck.jar 实测 version/vendor/arch，支持 AURACORE_JARS_DIR 覆盖）
 
 #### CoreBackend ABI v0（2026-09-06）
 
@@ -74,7 +74,7 @@ AuraCore 不是 PrismLauncher 的 fork，而是其核心域源码的独立蒸馏
 - 查询全部以紧凑 JSON 返回，调用方用 `auracore_free` 释放；错误经状态码 + `auracore_last_error` 暴露。
 - `auracore_backend.dll/.so` 链接整个 auracore_core（全量符号经 DLL 链接补齐：archive / helpers / icons / meta JsonFormat /
   TaskStepWrapper / QuitAfterGameStop / JavaMetadata / PixmapCache::s_instance）。
-- `auracore-probe` CLI 冒烟工具：instances / java / component-lists 三查询，CI 已纳入运行。
+- `auracore-probe` CLI 冒烟工具：instances / java / probe-java / component-lists / component-versions 五查询，CI 已纳入运行。
 - 严格离线：meta 无缓存时 `cached:false`，绝不触发网络（loadTask(Offline) 无文件会回源 + NetJob 自动重试死循环，
   ABI 侧用文件存在性守卫 + 30s 事件循环安全阀双保险）。
 ### 阶段 3 —— 写路径

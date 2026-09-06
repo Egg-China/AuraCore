@@ -60,3 +60,4 @@
   以及 `PixmapCache::s_instance` 定义（对齐上游 Application.cpp）。
 - 修复导入期遗留：murmur2 / qdcss / javacheck 共 8 个文件在 git blob 中为 NUL 污染（本地工作区干净但
   stat 缓存掩盖了差异，新 clone 才暴露），已全部重新提交。
+- ABI v0 追加（同日）：`auracore_list_component_versions`（meta/<uid>/index.json 离线明细，缓存文件为准不依赖索引注册表）、`auracore_probe_java`（JavaCheck.jar 实测 version/vendor/arch，上限 8 个候选、单项 20s 阀）、`AURACORE_JARS_DIR` 环境覆盖（CoreApplication::getJarPath）。
