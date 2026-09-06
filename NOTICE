@@ -1,0 +1,34 @@
+AuraCore 版权与来源声明
+========================
+
+AuraCore 是从 PrismLauncher 核心域源码蒸馏而来的独立仓库（非 GitHub fork，
+不继承上游 Release / Issue / fork 网络）。
+
+上游来源
+--------
+- 仓库：https://github.com/PrismLauncher/PrismLauncher
+- 分支：develop
+- 基线提交：24124e5b4（"Issue/PR template stuff (#6028)"）
+- 导入范围：launcher/ 核心域子集（详见 docs/IMPORT_MANIFEST.md）
+
+版权声明
+--------
+- Copyright (C) 2022-2026 Prism Launcher Contributors
+- Copyright (C) 2013-2021 MultiMC Contributors
+- MultiMC 原始作者：peterix
+
+全部从上游导入的源码文件保留其原始版权头与作者声明，未做任何移除或改写。
+AuraCore 新增代码同样以 GPL-3.0 发布（派生作品只能延续同一许可证）。
+
+许可证
+------
+- 本仓库整体适用 GNU General Public License v3.0（见 LICENSE / COPYING.md）。
+- 第三方依赖的许可证以上游仓库 NOTICE.md 与各 libraries/ 目录内声明为准；
+  本阶段未导入 vendored 依赖，依赖闭包在阶段 1 厘清后再逐项引入并同步声明。
+
+合规要点
+--------
+1. 保留上游文件头中的版权与许可条款（GPL-3.0 §4、§5）。
+2. 显著声明修改：AuraCore 对导入代码的实质修改在提交说明与 docs/ 中逐项记录。
+3. 不将 GPL 代码与 Apache-2.0 边界（Aura Plugin System）源码混合；
+   两侧只允许通过进程/协议/数据文件边界互通。
