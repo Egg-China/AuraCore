@@ -63,6 +63,7 @@ class Backend {
     QByteArray msaLoginInfo(const QString& taskId);
     QByteArray launchInstance(const QString& id, const QString& accountProfile, const QString& offlineName);
     QByteArray stopInstance(const QString& id);
+    QByteArray instanceLogs(const QString& id, int maxLines);
     QByteArray taskStatus(const QString& taskId);
     QByteArray waitTask(const QString& taskId, int timeoutMs);
     bool cancelTask(const QString& taskId);

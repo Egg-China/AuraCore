@@ -167,6 +167,10 @@ AURACORE_BACKEND_API auracore_status auracore_launch_instance(auracore_backend* 
 
 /* Asks the running instance process to terminate. */
 AURACORE_BACKEND_API auracore_status auracore_stop_instance(auracore_backend* backend, const char* id, char** out_json);
+/* Reads the newest launch log lines of an instance from the circular log
+ * model (max_lines <= 0 means 200, hard cap 2000). Returns
+ * { id, running, total, logs: [{ level, line }] }. */
+AURACORE_BACKEND_API auracore_status auracore_read_instance_logs(auracore_backend* backend, const char* id, int max_lines, char** out_json);
 /* Frees a string produced by any query above. NULL is accepted. */
 AURACORE_BACKEND_API void auracore_free(char* text);
 

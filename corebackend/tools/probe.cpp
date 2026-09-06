@@ -271,6 +271,13 @@ int main(int argc, char** argv)
                     auracore_free(statusJson);
                 }
             }
+                char* logsJson = nullptr;
+                const auracore_status logsStatus = auracore_read_instance_logs(backend, "Aura Probe Reborn", 50, &logsJson);
+                std::printf("--- instance-logs (status %d) ---\n", int(logsStatus));
+                if (logsJson != nullptr) {
+                    std::puts(logsJson);
+                    auracore_free(logsJson);
+                }
             char* stopJson = nullptr;
             const auracore_status stopStatus = auracore_stop_instance(backend, "Aura Probe Reborn", &stopJson);
             std::printf("--- stop-instance (status %d) ---\n", int(stopStatus));

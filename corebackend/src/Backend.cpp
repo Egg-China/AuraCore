@@ -46,6 +46,8 @@
 #include "meta/Version.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
 #include "minecraft/auth/AccountList.h"
+#include "launch/LaunchTask.h"
+#include "launch/LogModel.h"
 #include "LaunchController.h"
 #include "minecraft/launch/MinecraftTarget.h"
 #include "InstanceDirUpdate.h"
@@ -806,6 +808,50 @@ QByteArray Backend::stopInstance(const QString& id)
     m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
     return {};
 }
+QByteArray Backend::instanceLogs(const QString& id, int maxLines)
+{
+    auto* instances = m_core->instances();
+    MinecraftInstance* instance = nullptr;
+    for (int i = 0; i < instances->count(); ++i) {
+        if (instances->at(i)->id() == id) {
+            instance = instances->at(i);
+            break;
+        }
+    }
+    if (instance == nullptr) {
+        m_lastError = QStringLiteral("Unknown instance id: %1").arg(id);
+        return {};
+    }
+
+    auto* task = instance->getLaunchTask();
+    QJsonArray logs;
+    if (task == nullptr) {
+        return toJson(QJsonDocument(QJsonObject{
+            { "id", id },
+            { "running", false },
+            { "logs", logs },
+        }));
+    }
+
+    auto* model = task->getLogModel().get();
+    const int total = model->rowCount();
+    const int limit = maxLines <= 0 ? 200 : std::min(maxLines, 2000);
+    const int first = std::max(0, total - limit);
+    for (int row = first; row < total; ++row) {
+        const QModelIndex index = model->index(row, 0);
+        const auto level = static_cast<MessageLevelValue>(index.data(LogModel::LevelRole).toInt());
+        logs.append(QJsonObject{
+            { "level", MessageLevel(level).toString() },
+            { "line", index.data(Qt::DisplayRole).toString() },
+        });
+    }
+    return toJson(QJsonDocument(QJsonObject{
+        { "id", id },
+        { "running", instance->isRunning() },
+        { "total", double(total) },
+        { "logs", logs },
+    }));
+}
 QByteArray Backend::taskStatus(const QString& taskId)
 {
     const auto it = m_tasks.constFind(taskId);
@@ -1141,6 +1187,13 @@ auracore_status auracore_stop_instance(auracore_backend* backend, const char* id
         return AURACORE_ERROR_INVALID_ARGUMENT;
     }
     return writeJson(backend->backend->stopInstance(QString::fromUtf8(id)), out_json);
+}
+auracore_status auracore_read_instance_logs(auracore_backend* backend, const char* id, int max_lines, char** out_json)
+{
+    if (backend == nullptr || id == nullptr || out_json == nullptr) {
+        return AURACORE_ERROR_INVALID_ARGUMENT;
+    }
+    return writeJson(backend->backend->instanceLogs(QString::fromUtf8(id), max_lines), out_json);
 }
 void auracore_free(char* text)
 {
