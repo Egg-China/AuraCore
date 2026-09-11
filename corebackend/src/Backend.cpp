@@ -632,6 +632,7 @@ QByteArray Backend::listAccounts()
 {
     QJsonArray array;
     const auto* accounts = m_core->accounts();
+    const auto defaultAccount = accounts->defaultAccount();
     for (int i = 0; i < accounts->count(); ++i) {
         const auto& account = accounts->at(i);
         QJsonObject object;
@@ -639,6 +640,7 @@ QByteArray Backend::listAccounts()
         object.insert("type", account->typeString());
         object.insert("internalId", account->internalId());
         object.insert("hasProfile", account->hasProfile());
+        object.insert("isDefault", account == defaultAccount);
         array.append(object);
     }
     return toJson(QJsonDocument(array));
