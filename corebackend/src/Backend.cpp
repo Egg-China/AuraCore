@@ -91,11 +91,34 @@ QJsonObject instanceToJson(MinecraftInstance* instance, const QString& group)
     object.insert("lastLaunch", double(instance->lastLaunch()));
 
     // Best effort: the component table may not have finished loading for
-    // freshly discovered instances, in which case the field stays null.
+    // freshly discovered instances, in which case the fields stay null.
     if (auto* profile = instance->getPackProfile()) {
         if (const auto& component = profile->getComponent("net.minecraft")) {
             object.insert("gameVersion", component->getVersion());
         }
+        static const struct { const char* id; QString name; } loaders[] = {
+            {"net.neoforged", QStringLiteral("NeoForge")},
+            {"net.minecraftforge", QStringLiteral("Forge")},
+            {"net.fabricmc.fabric-loader", QStringLiteral("Fabric")},
+            {"org.quiltmc.quilt-loader", QStringLiteral("Quilt")},
+        };
+        for (const auto& loader : loaders) {
+            const auto& component = profile->getComponent(QString::fromLatin1(loader.id));
+            if (!component) {
+                continue;
+            }
+            const QString version = component->getVersion();
+            if (!version.isEmpty()) {
+                object.insert("loader", loader.name);
+                object.insert("loaderVersion", version);
+                break;
+            }
+        }
+    }
+    const QDir modsDir(instance->modsRoot());
+    if (modsDir.exists()) {
+        const int modCount = modsDir.entryList({"*.jar", "*.zip", "*.litemod"}, QDir::Files).size();
+        object.insert("modCount", double(modCount));
     }
     return object;
 }
